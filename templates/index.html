@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floor Plan</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #1e293b; /* Slate-900 equivalent */
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    #map-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    svg {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="map-container"></div>
+  <script type="module" src="{{ url_for('static', filename='js/map.js') }}"></script>
+</body>
+</html>
