@@ -17,8 +17,8 @@ export const floor = [
         ]
       },
       {
-        id: "master",
-        name: "Master",
+        id: "Office",
+        name: "Office",
         shade: "#CBD5C8",
         points: [
           [7.55, 11.84], [7.55, 8.99], [1.7, 8.99], [1.7, 9.68],
@@ -26,8 +26,8 @@ export const floor = [
         ]
       },
       {
-        id: "stue",
-        name: "Stue",
+        id: "Kitchen",
+        name: "Kitchen",
         shade: "#EBECE6",
         points: [
           [7.55, 5.85], [1.7, 5.85], [1.7, 5.18], [1.85, 5.18],
@@ -42,7 +42,7 @@ export const floor = [
 // Furniture data for the first floor
 export const furniture = [
   {
-    room: "stue",
+    room: "Kitchen",
     name: "Table",
     points: [
       [4.5, 3.8], // top-left
@@ -52,7 +52,7 @@ export const furniture = [
     ]
   },
   {
-    room: "stue",
+    room: "Kitchen",
     name: "Table2",
     points: [
       [4.5, 3.8], // top-left
@@ -62,7 +62,7 @@ export const furniture = [
     ]
   },
   {
-    room: "stue",
+    room: "Kitchen",
     name: "Sofa",
     points: [
       [6.7, 5.8], // top-left
@@ -72,7 +72,7 @@ export const furniture = [
     ]
   },
   {
-    room: "stue",
+    room: "Kitchen",
     name: "Kitchen_island",
     points: [
       [2, 0.8], // top-left
@@ -82,7 +82,7 @@ export const furniture = [
     ]
   },
   {
-    room: "stue",
+    room: "Kitchen",
     name: "Storage",
     points: [
       [6.7, 5.8], // top-left
@@ -92,7 +92,7 @@ export const furniture = [
     ]
   },
   {
-  room: "stue",
+  room: "Kitchen",
   name: "shelf",
   points: [
       [2.12, 5.8], // top-left
@@ -102,7 +102,7 @@ export const furniture = [
   ]
   },
   {
-    room: "stue",
+    room: "Kitchen",
     name: "Polygon",
     points: Array.from({ length: 12 }, (_, i) => {
       const angle = (i / 12) * 2 * Math.PI;
@@ -114,7 +114,7 @@ export const furniture = [
     })
   },
   {
-    room: "master",
+    room: "Office",
     name: "Table3",
     points: [
       [3.29, 11.8], // top-left
@@ -124,7 +124,7 @@ export const furniture = [
     ]
   },
   {
-    room: "master",
+    room: "Office",
     name: "Table4",
     points: [
       [6.09, 11.8], // top-left
@@ -134,7 +134,7 @@ export const furniture = [
     ]
     },
     {
-      room: "master",
+      room: "Office",
       name: "Table5",
       points: [
         [3.29, 11.8], // top-left
@@ -144,7 +144,7 @@ export const furniture = [
       ]
     },
     {
-      room: "master",
+      room: "Office",
       name: "Table6",
       points: [
         [5.69, 9.8], // top-left
@@ -154,7 +154,7 @@ export const furniture = [
       ]
     },
     {
-      room: "master",
+      room: "Office",
       name: "Table7",
       points: [
         [3.89, 9.8], // top-left
@@ -166,26 +166,27 @@ export const furniture = [
 ];
 
 export const nodes = [
-{
-  name: "Master",
-  point: [7.5, 8.5],
-},
-{name: "Hallway",
-  point: [0.25, 4.5]
-},
-{
-  name: "Stue",
-  point: [7.5, 0.2]
-},
-{
-  name: "Red_esp",
-  point: [2.25, 1.5]
-},
-{
-  name: "blue_esp",
-  point: [2.2, 6.2]
-}
-]
+  {
+    name: "Office_1",
+    point: [7.2, 11.5],
+  },
+  {name: "Office_2",
+    point: [1.9, 9.3]
+  },
+  {
+    name: "Hallway_1",
+    point: [0.1, 11.4]
+  },
+  {
+    name: "Kit_1",
+    point: [2.1, 3.6]
+  },
+  {
+    name: "Kit_2",
+    point: [7.2, 0.5]
+  }
+  ]
+
 
 // List of walls and their orientation
 export const walls = [
@@ -210,42 +211,42 @@ export const walls = [
     orientation: "south"
   },
   {
-    room: "master",
+    room: "Office",
     points: [[1.7, 11.84], [1.7, 8.99]],
     orientation: "west"
   },
   {
-    room: "master",
+    room: "Office",
     points: [[1.7, 11.7], [7.55, 11.7]],
     orientation: "north"
   },
   {
-    room: "master",
+    room: "Office",
     points: [[7.55, 8.99], [7.55, 11.7]],
     orientation: "east"
   },
   {
-    room: "master",
+    room: "Office",
     points: [[7.55, 8.99], [1.7, 8.99]],
     orientation: "south"
   },
   {
-    room: "stue",
+    room: "Kitchen",
     points: [[1.7, 0], [1.7, 5.85]],
     orientation: "west"
   },
   {
-    room: "stue",
+    room: "Kitchen",
     points: [[1.7, 5.85], [7.55, 5.85]],
     orientation: "north"
   },
   {
-    room: "stue",
+    room: "Kitchen",
     points: [[7.55, 5.85], [7.55, 0]],
     orientation: "east"
   },
   {
-    room: "stue",
+    room: "Kitchen",
     points: [[7.55, 0], [1.7, 0]],
     orientation: "south"
   }

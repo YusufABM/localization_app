@@ -19,8 +19,8 @@ const centerY = (height - mapHeight) / 2;
 
 const buttonCounts = {
   hallway: 18,
-  master: 32,
-  stue: 64
+  Office: 32,
+  Kitchen: 64
 };
 
 
