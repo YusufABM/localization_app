@@ -1,8 +1,8 @@
 
 // Import data from data.js
-import { floor, furniture, nodes, } from "./data.js";
+import { floor, furniture, nodes,} from "./data.js";
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { renderBounds, renderFurniture, renderRooms, renderNodes, renderRoomButtons } from "./rendering.js";
+import { renderBounds, renderFurniture, renderRooms, renderNodes, renderRoomButtons, startPositionUpdates } from "./rendering.js";
 
 // Config and scaling
 const width = window.innerWidth;
@@ -57,6 +57,7 @@ renderNodes(nodes);
 
 // Render buttons for each room
 renderRoomButtons(floor[0].rooms, buttonCounts);
+startPositionUpdates(mapHeight);
 
 // Apply the initial transform to the zoom behavior
 svg.call(zoom.transform, initialTransform);

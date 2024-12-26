@@ -1,6 +1,7 @@
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { floor, furniture, nodes, } from "./data.js";
+import { floor, furniture, nodes, fetchLatestPosition,latestPosition, fetchLatestRoom, latestRoom } from "./data.js";
 import { g } from "./map.js";
+
 
 // Config and scaling
 const width = window.innerWidth;
@@ -25,6 +26,52 @@ export function renderBounds(bounds) {
     .attr("stroke", "#f5f7f7")
     .attr("stroke-width", 0);
 }
+
+// Render latest position and room name on the map
+export function updateLatestPosition(mapHeight) {
+  let positionDot = g.select(".latest-position-dot");
+  let roomText = g.select(".latest-room-text");
+
+  if (positionDot.empty()) {
+    // Append the circle if it doesn't exist
+    positionDot = g.append("circle")
+      .attr("class", "latest-position-dot")
+      .attr("r", 5)
+      .attr("fill", "red");
+  }
+
+  if (roomText.empty()) {
+    // Append the room name text if it doesn't exist
+    roomText = g.append("text")
+      .attr("class", "latest-room-text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", "16px")
+      .attr("fill", "black")
+      .attr("font-weight", "bold")
+      .attr("font-family", "Arial");
+  }
+
+  // Update the circle's position
+  positionDot
+    .attr("cx", latestPosition.x * scaleFactor)
+    .attr("cy", mapHeight - latestPosition.y * scaleFactor);
+
+  // Update the room name position and text
+  roomText
+    .attr("x", latestPosition.x * scaleFactor)
+    .attr("y", mapHeight - latestPosition.y * scaleFactor - 10) // Position above the dot
+    .text(latestRoom.room);
+}
+
+// Periodically fetch and update position and room name
+export function startPositionUpdates(mapHeight) {
+  setInterval(async () => {
+    await fetchLatestRoom();
+    await fetchLatestPosition();
+    updateLatestPosition(mapHeight); // Update position and room name
+  }, 200);
+}
+
 
 // Render rooms
 export function renderRooms(rooms) {
@@ -74,8 +121,8 @@ export function renderNodes(nodes) {
     g.append("rect")
       .attr("width", 10)
       .attr("height", 10)
-      .attr("x", item.point[0] * scaleFactor)
-      .attr("y", mapHeight - item.point[1] * scaleFactor)
+      .attr("x", item.point[0] * scaleFactor - 5)
+      .attr("y", mapHeight - item.point[1] * scaleFactor - 5)
       .attr("fill", "green")
       .attr("fill-opacity", 0.4)
       .attr("stroke", "black")

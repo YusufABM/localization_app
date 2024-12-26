@@ -1,4 +1,5 @@
-
+export const latestRoom = { room: "Unknown" };
+export const latestPosition = { x: 0, y: 0 };
 
 export const floor = [
   {
@@ -45,71 +46,71 @@ export const furniture = [
     room: "Kitchen",
     name: "Table",
     points: [
-      [4.5, 3.8], // top-left
-      [6.3, 3.8], // top-right
-      [6.3, 2.2], // bottom-left
-      [4.5, 2.2]  // bottom-right
+      [4.5, 3.8],
+      [6.3, 3.8],
+      [6.3, 2.2],
+      [4.5, 2.2]
     ]
   },
   {
     room: "Kitchen",
     name: "Table2",
     points: [
-      [4.5, 3.8], // top-left
-      [6.3, 3.8], // top-right
-      [6.3, 3], // bottom-left
-      [4.5,3]  // bottom-right
+      [4.5, 3.8],
+      [6.3, 3.8],
+      [6.3, 3],
+      [4.5,3]
     ]
   },
   {
     room: "Kitchen",
     name: "Sofa",
     points: [
-      [6.7, 5.8], // top-left
-      [6.7, 5], // top-right
-      [4.3, 5], // bottom-right
-      [4.3, 5.8]  // bottom-left
-    ]
+      [6.7, 5.8],
+      [6.7, 5],
+      [4.3, 5],
+      [4.3, 5.8]
+      ]
   },
   {
     room: "Kitchen",
     name: "Kitchen_island",
     points: [
-      [2, 0.8], // top-left
-      [5.9, 0.8], // top-right
-      [5.9, 0.0], // bottom-right
-      [2, 0.0]  // bottom-left
-    ]
+      [2, 0.8],
+      [5.9, 0.8],
+      [5.9, 0.0],
+      [2, 0.0]
+      ]
   },
   {
     room: "Kitchen",
     name: "Storage",
     points: [
-      [6.7, 5.8], // top-left
-      [7.5, 5.8], // top-right
-      [7.5, 5.45], // bottom-right
-      [6.7, 5.45]  // bottom-left
-    ]
+      [6.7, 5.8],
+      [7.5, 5.8],
+      [7.5, 5.45],
+      [6.7, 5.45]
+      ]
   },
   {
   room: "Kitchen",
   name: "shelf",
   points: [
-      [2.12, 5.8], // top-left
-      [3.85, 5.8], // top-right
-      [3.85, 5.4], // bottom-right
-      [2.12, 5.4]  // bottom-left
-  ]
+      [2.12, 5.8],
+      [3.85, 5.8],
+      [3.85, 5.4],
+      [2.12, 5.4]
+    ]
   },
   {
     room: "Kitchen",
     name: "Polygon",
     points: Array.from({ length: 12 }, (_, i) => {
       const angle = (i / 12) * 2 * Math.PI;
-      const radius = 0.9/2; // diameter / 2
+      const radius = 0.9/2;
       return [
-        6.9 + radius * Math.cos(angle), // x coordinate
-        1 + radius * Math.sin(angle)    // y coordinate
+        6.9 + radius * Math.cos(angle),
+        1 + radius * Math.sin(angle)
       ];
     })
   },
@@ -117,73 +118,73 @@ export const furniture = [
     room: "Office",
     name: "Table3",
     points: [
-      [3.29, 11.8], // top-left
-      [6.09, 11.8], // top-right
-      [6.09, 11.16], // bottom-right
-      [3.29, 11.16]  // bottom-left
+      [3.29, 11.8],
+      [6.09, 11.8],
+      [6.09, 11.16],
+      [3.29, 11.16]
     ]
   },
   {
     room: "Office",
     name: "Table4",
     points: [
-      [6.09, 11.8], // top-left
-      [7.49, 11.8], // top-right
-      [7.49, 11.16], // bottom-right
-      [6.09, 11.16]  // bottom-left
+      [6.09, 11.8],
+      [7.49, 11.8],
+      [7.49, 11.16],
+      [6.09, 11.16]
     ]
     },
     {
       room: "Office",
       name: "Table5",
       points: [
-        [3.29, 11.8], // top-left
-        [4.59, 11.8], // top-right
-        [4.59, 11.16], // bottom-right
-        [3.29, 11.16]  // bottom-left
-      ]
+        [3.29, 11.8],
+        [4.59, 11.8],
+        [4.59, 11.16],
+        [3.29, 11.16]
+        ]
     },
     {
       room: "Office",
       name: "Table6",
       points: [
-        [5.69, 9.8], // top-left
-        [7.49, 9.8], // top-right
-        [7.49, 9], // bottom-right
-        [5.69, 9]  // bottom-left
-      ]
+        [5.69, 9.8],
+        [7.49, 9.8],
+        [7.49, 9],
+        [5.69, 9]
+        ]
     },
     {
       room: "Office",
       name: "Table7",
       points: [
-        [3.89, 9.8], // top-left
-        [5.69, 9.8], // top-right
-        [5.69, 9], // bottom-right
-        [3.89, 9]  // bottom-left
-      ]
+        [3.89, 9.8],
+        [5.69, 9.8],
+        [5.69, 9],
+        [3.89, 9]
+        ]
     }
 ];
 
 export const nodes = [
   {
     name: "Office_1",
-    point: [7.2, 11.5],
+    point: [7.4, 11.5],
   },
   {name: "Office_2",
-    point: [1.9, 9.3]
+    point: [1.9, 9.1]
   },
   {
     name: "Hallway_1",
-    point: [0.1, 11.4]
+    point: [0.2, 8.2]
   },
   {
     name: "Kit_1",
-    point: [2.1, 3.6]
+    point: [1.9, 3]
   },
   {
     name: "Kit_2",
-    point: [7.2, 0.5]
+    point: [7.3, 0.1]
   }
   ]
 
@@ -307,6 +308,31 @@ export function calculateButtonPosition(button, room) {
       `- ${closestWall.distance.toFixed(2)}m from the ${closestWall.orientation} wall.\n` +
       `- ${secondClosestWall.distance.toFixed(2)}m from the ${secondClosestWall.orientation} wall.`
   );
+}
+
+// Update latest position on the map
+export async function fetchLatestPosition() {
+  try {
+    const response = await fetch('/latest_position');
+    const data = await response.json();
+    latestPosition.x = data.x;
+    latestPosition.y = data.y;
+    //console.log(`Updated Position - x: ${latestPosition.x}, y: ${latestPosition.y}`);
+  } catch (error) {
+    console.error('Error fetching latest position:', error);
+  }
+}
+
+// Update the latest room estimate on the map
+export async function fetchLatestRoom() {
+  try {
+    const response = await fetch('/latest_room');
+    const data = await response.json();
+    latestRoom.room = data.room;
+    console.log(`DATA Room: ${latestRoom.room}`);
+  } catch (error) {
+    console.error('Error fetching latest room:', error);
+  }
 }
 
 export function searchButtonsOnLine(position, room, roomPositions) {
