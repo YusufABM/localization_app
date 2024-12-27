@@ -1,5 +1,5 @@
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { floor, furniture, nodes, fetchLatestPosition,latestPosition, fetchLatestRoom, latestRoom } from "./data.js";
+import { floor, furniture, nodes, radarPositions, fetchLatestPosition,latestPosition, fetchLatestRoom, latestRoom } from "./data.js";
 import { g } from "./map.js";
 
 
@@ -123,12 +123,35 @@ export function renderNodes(nodes) {
       .attr("height", 10)
       .attr("x", item.point[0] * scaleFactor - 5)
       .attr("y", mapHeight - item.point[1] * scaleFactor - 5)
-      .attr("fill", "green")
+      .attr("fill", "lightred")
       .attr("fill-opacity", 0.4)
       .attr("stroke", "black")
       .attr("stroke-width", 1)
       .attr("strok-opacity", 1)
       .attr("transform", `rotate(45, ${item.point[0] * scaleFactor}, ${mapHeight - item.point[1] * scaleFactor})`);
+  });
+}
+
+// Render mmWave sensors as half-circles
+export function renderSensors(radarPositions) {
+  radarPositions.forEach(sensor => {
+    const position = sensor.position;
+    if (position && position.length >= 2) {
+      g.append("path")
+        .attr("d", d3.arc()({
+          innerRadius: 4,
+          outerRadius: 10,
+          startAngle: Math.PI,
+          endAngle: -Math.PI
+        }))
+        .attr("transform", `translate(${position[0] * scaleFactor}, ${mapHeight - position[1] * scaleFactor})`)
+        .attr("fill", "blue")
+        .attr("fill-opacity", 0.4)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1);
+    } else {
+      console.warn('Invalid radar position:', sensor);
+    }
   });
 }
 

@@ -180,7 +180,7 @@ export const nodes = [
   },
   {
     name: "Kit_1",
-    point: [1.9, 3]
+    point: [1.9, 2.92]
   },
   {
     name: "Kit_2",
@@ -188,6 +188,15 @@ export const nodes = [
   }
   ]
 
+// mmWave radar positions
+export const radarPositions = [
+  { name: "Office_mmWave",
+    position: [7.5, 11.8]
+  },
+  { name: "Kitchen_mmWave",
+    position: [7.5, 2.92]
+  }
+];
 
 // List of walls and their orientation
 export const walls = [
