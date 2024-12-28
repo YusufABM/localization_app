@@ -1,5 +1,5 @@
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { floor, furniture, nodes, radarPositions, fetchLatestPosition,latestPosition, fetchLatestRoom, latestRoom } from "./data.js";
+import { floor, furniture, nodes, radarPositions, fetchLatestPosition,latestPosition, fetchLatestRoom, latestRoom, fetchLatestMmwaveData, latestMmwaveData } from "./data.js";
 import { g } from "./map.js";
 
 
@@ -66,13 +66,47 @@ export function updateLatestPosition(mapHeight) {
 // Periodically fetch and update position and room name
 export function startPositionUpdates(mapHeight) {
   setInterval(async () => {
-    await fetchLatestRoom();
-    await fetchLatestPosition();
+    //await fetchLatestRoom();
+    //await fetchLatestPosition();
     updateLatestPosition(mapHeight); // Update position and room name
   }, 200);
 }
 
+// Function to render mmWave sensor readings
+export function renderMmwaveSensors() {
+  const sensors = Object.keys(latestMmwaveData);
+  sensors.forEach(sensor => {
+    const data = latestMmwaveData[sensor];
+    const radar = radarPositions[sensor];
 
+    if (!data || !radar) {
+      console.warn(`Missing data or radar position for sensor: ${sensor}`);
+      return;
+    }
+
+    const x = radar.x + (data.x / 1000) * Math.cos((radar.orientation + data.angle) * Math.PI / 180);
+    const y = radar.y + (data.x / 1000) * Math.sin((radar.orientation + data.angle) * Math.PI / 180);
+
+    console.log(`Sensor ${sensor} at (${x.toFixed(2)}, ${y.toFixed(2)})`);
+    console.log('Calculated x and y:', x, y);
+    g.append("circle")
+      .attr("cx", x * scaleFactor)
+      .attr("cy", mapHeight - y * scaleFactor)
+      .attr("r", 5)
+      .attr("fill", "red")
+      .attr("fill-opacity", 0.6)
+      .attr("stroke", "black")
+      .attr("stroke-width", 1);
+
+    g.append("line")
+      .attr("x1", radar.x * scaleFactor)
+      .attr("y1", mapHeight - radar.y * scaleFactor)
+      .attr("x2", x * scaleFactor)
+      .attr("y2", mapHeight - y * scaleFactor)
+      .attr("stroke", "red")
+      .attr("stroke-width", 2);
+  });
+}
 // Render rooms
 export function renderRooms(rooms) {
   rooms.forEach(room => {

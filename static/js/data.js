@@ -1,5 +1,9 @@
-export const latestRoom = { room: "Unknown" };
+export const latestRoom = { room: "Office" };
 export const latestPosition = { x: 0, y: 0 };
+export let latestMmwaveData = {
+  office: { x: 0, y: 0, angle: 0 },
+  kitchen: { x: 0, y: 0, angle: 0 }
+};
 
 export const floor = [
   {
@@ -188,15 +192,11 @@ export const nodes = [
   }
   ]
 
-// mmWave radar positions
-export const radarPositions = [
-  { name: "Office_mmWave",
-    position: [7.5, 11.8]
-  },
-  { name: "Kitchen_mmWave",
-    position: [7.5, 2.92]
-  }
-];
+// Radar positions and orientations
+export const radarPositions = {
+  office: { x: 7.5, y: 11.8, orientation: 45 }
+  //kitchen: { x: 7.5, y: 2.92, orientation: 45 }
+};
 
 // List of walls and their orientation
 export const walls = [
@@ -337,10 +337,22 @@ export async function fetchLatestRoom() {
   try {
     const response = await fetch('/latest_room');
     const data = await response.json();
-    latestRoom.room = data.room;
-    console.log(`DATA Room: ${latestRoom.room}`);
+    //latestRoom.room = data.room;
+    //console.log(`DATA Room: ${latestRoom.room}`);
   } catch (error) {
     console.error('Error fetching latest room:', error);
+  }
+}
+
+// Update the latest mmWave data
+export async function fetchLatestMmwaveData() {
+  try {
+    const response = await fetch('/latest_mmwave');
+    const data = await response.json();
+    latestMmwaveData = data;
+    //console.log(`DATA mmWave: ${latestMmwaveData}`);
+  } catch (error) {
+    console.error('Error fetching latest mmWave data:', error);
   }
 }
 

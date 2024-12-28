@@ -2,7 +2,7 @@
 // Import data from data.js
 import { floor, furniture, nodes, radarPositions} from "./data.js";
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { renderBounds, renderFurniture, renderRooms, renderNodes, renderSensors, renderRoomButtons, startPositionUpdates } from "./rendering.js";
+import { renderBounds, renderFurniture, renderRooms, renderNodes, renderSensors, renderRoomButtons, startPositionUpdates, renderMmwaveSensors } from "./rendering.js";
 
 // Config and scaling
 const width = window.innerWidth;
@@ -55,9 +55,10 @@ renderFurniture(furniture);
 renderRooms(floor[0].rooms);
 //renderNodes(nodes);
 //renderSensors(radarPositions);
+renderMmwaveSensors();
 
 // Render buttons for each room
-renderRoomButtons(floor[0].rooms, buttonCounts);
+//renderRoomButtons(floor[0].rooms, buttonCounts);
 //startPositionUpdates(mapHeight);
 
 // Apply the initial transform to the zoom behavior

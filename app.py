@@ -1,16 +1,14 @@
-from flask import Flask, render_template, jsonify
-from store.mqtt_handler import init_mqtt, latest_ble_data, latest_room_message
 import logging
-
+from flask import Flask, render_template, jsonify
+from flask_socketio import SocketIO
+from store.mqtt_handler import init_mqtt, latest_ble_data, latest_room_message, mmwave_data
 
 logging.getLogger('werkzeug').disabled = True
 
-from datetime import datetime
-
 app = Flask(__name__)
+socketio = SocketIO(app)
 
-init_mqtt(app)
-
+init_mqtt(app, socketio)
 
 @app.route('/')
 def index() -> str:
@@ -28,7 +26,10 @@ def latest_room():
     print(f"Serving latest_room_message: {room}")
     return jsonify({"room": room})
 
+@app.route('/latest_mmwave')
+def latest_mmwave():
+    global mmwave_data
+    return jsonify(mmwave_data)
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
-
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
