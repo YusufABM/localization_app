@@ -68,7 +68,9 @@ export function startPositionUpdates(mapHeight) {
   setInterval(async () => {
     //await fetchLatestRoom();
     //await fetchLatestPosition();
+    await fetchLatestMmwaveData();
     updateLatestPosition(mapHeight); // Update position and room name
+    renderMmwaveSensors(); // Update mmWave sensor readings
   }, 200);
 }
 
@@ -80,31 +82,48 @@ export function renderMmwaveSensors() {
     const radar = radarPositions[sensor];
 
     if (!data || !radar) {
-      console.warn(`Missing data or radar position for sensor: ${sensor}`);
+      console.warn(`No data or radar position for sensor: ${sensor}`);
       return;
     }
 
-    const x = radar.x + (data.x / 1000) * Math.cos((radar.orientation + data.angle) * Math.PI / 180);
-    const y = radar.y + (data.x / 1000) * Math.sin((radar.orientation + data.angle) * Math.PI / 180);
+    // Correct distance calculation
+    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000; // Convert to meters
 
-    console.log(`Sensor ${sensor} at (${x.toFixed(2)}, ${y.toFixed(2)})`);
-    console.log('Calculated x and y:', x, y);
+    // Adjust angle based on direction and radar orientation
+    let adjustedAngle = data.angle;
+    if (data.direction === 'Left') {
+      adjustedAngle -= radar.orientation; // Adjust for radar's mounting angle
+    } else if (data.direction === 'Right') {
+      adjustedAngle += radar.orientation; // Adjust for radar's mounting angle
+    } // 'Middle' keeps the angle as is
+
+    const angleInRadians = adjustedAngle * (Math.PI / 180);
+
+    // Calculate global x and y based on radar position, distance, and corrected angle
+    const calculatedX = radar.x + distance * Math.cos(angleInRadians);
+    const calculatedY = radar.y + distance * Math.sin(angleInRadians);
+
+    // Debugging output
+    console.log(`Sensor: ${sensor}, Distance: ${distance.toFixed(2)} meters, X: ${calculatedX.toFixed(2)} meters, Y: ${calculatedY.toFixed(2)} meters`);
+
+    // Render the calculated position as a circle
     g.append("circle")
-      .attr("cx", x * scaleFactor)
-      .attr("cy", mapHeight - y * scaleFactor)
+      .attr("cx", calculatedX * scaleFactor)
+      .attr("cy", mapHeight - calculatedY * scaleFactor)
       .attr("r", 5)
       .attr("fill", "red")
       .attr("fill-opacity", 0.6)
       .attr("stroke", "black")
       .attr("stroke-width", 1);
 
+    /* Render a line from the radar to the calculated position
     g.append("line")
       .attr("x1", radar.x * scaleFactor)
       .attr("y1", mapHeight - radar.y * scaleFactor)
-      .attr("x2", x * scaleFactor)
-      .attr("y2", mapHeight - y * scaleFactor)
+      .attr("x2", calculatedX * scaleFactor)
+      .attr("y2", mapHeight - calculatedY * scaleFactor)
       .attr("stroke", "red")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2);*/
   });
 }
 // Render rooms

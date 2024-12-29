@@ -55,11 +55,10 @@ renderFurniture(furniture);
 renderRooms(floor[0].rooms);
 //renderNodes(nodes);
 //renderSensors(radarPositions);
-renderMmwaveSensors();
 
 // Render buttons for each room
 //renderRoomButtons(floor[0].rooms, buttonCounts);
-//startPositionUpdates(mapHeight);
+startPositionUpdates(mapHeight);
 
 // Apply the initial transform to the zoom behavior
 svg.call(zoom.transform, initialTransform);

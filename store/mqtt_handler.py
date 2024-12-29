@@ -10,8 +10,8 @@ latest_ble_data = {"x": 0, "y": 0}
 
 global mmwave_data
 mmwave_data = {
-    "office": {"x": 0, "y": 0, "angle": 0},
-    "kitchen": {"x": 0, "y": 0, "angle": 0},
+    "office": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown"},
+    "kitchen": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown"}
     # Add other locations as needed
 }
 
@@ -47,6 +47,7 @@ def init_mqtt(app, socketio):
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_x/state')
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_y/state')
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_angle/state')
+            mqtt_client.subscribe('mmwave-office/sensor/_target1_direction/state')
             # Add other subscriptions as needed
         else:
             print('Bad connection. Code:', rc)
@@ -78,6 +79,8 @@ def init_mqtt(app, socketio):
                     mmwave_data['office']['y'] = float(payload)
                 elif '_target1_angle' in topic:
                     mmwave_data['office']['angle'] = float(payload)
+                elif '_target1_direction' in topic:
+                    mmwave_data['office']['direction'] = payload
                 print(f"Updated mmWave office data: {mmwave_data['office']}")
                 socketio.emit('update_mmwave', {'location': 'office', 'data': mmwave_data['office']})
                 return
