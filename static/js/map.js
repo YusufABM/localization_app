@@ -54,7 +54,7 @@ renderBounds(floor[0].bounds);
 renderFurniture(furniture);
 renderRooms(floor[0].rooms);
 //renderNodes(nodes);
-//renderSensors(radarPositions);
+renderSensors(radarPositions);
 
 // Render buttons for each room
 //renderRoomButtons(floor[0].rooms, buttonCounts);

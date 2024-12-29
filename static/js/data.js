@@ -1,8 +1,8 @@
 export const latestRoom = { room: "Office" };
 export const latestPosition = { x: 0, y: 0 };
 export let latestMmwaveData = {
-  office: { x: 0, y: 0, angle: 0, direction: "" },
-  kitchen: { x: 0, y: 0, angle: 0, directuin: "" }
+  office: { x: 0, y: 0, angle: 0, direction: "", target_count: 0 },
+  kitchen: { x: 0, y: 0, angle: 0, directuin: "", target_count: 0 }
 };
 
 export const floor = [
@@ -194,8 +194,8 @@ export const nodes = [
 
 // Radar positions and orientations
 export const radarPositions = {
-  office: { x: 7.55, y: 11.3, orientation: 90 }
-  //kitchen: { x: 7.5, y: 2.92, orientation: 45 }
+  office: { x: 7.45, y: 11.9, orientation: 165 },
+  kitchen: { x: 7.45, y: 2.92, orientation: 120 }
 };
 
 // List of walls and their orientation
@@ -351,7 +351,7 @@ export async function fetchLatestMmwaveData() {
     const data = await response.json();
     console.log(data);
     latestMmwaveData = data;
-    console.log(`DATA mmWave: ${latestMmwaveData}`);
+    //console.log(`DATA mmWave: ${latestMmwaveData}`);
   } catch (error) {
     console.error('Error fetching latest mmWave data:', error);
   }

@@ -10,9 +10,8 @@ latest_ble_data = {"x": 0, "y": 0}
 
 global mmwave_data
 mmwave_data = {
-    "office": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown"},
-    "kitchen": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown"}
-    # Add other locations as needed
+    "office": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown", "target_count": 0},
+    "kitchen": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown", "target_count": 0}
 }
 
 mqtt_client = Mqtt()
@@ -49,6 +48,8 @@ def init_mqtt(app, socketio):
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_angle/state')
             mqtt_client.subscribe('mmwave-office/sensor/_target1_direction/state')
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_direction/state')
+            mqtt_client.subscribe('mmwave-kitchen/sensor/_all_target_counts/state')
+            mqtt_client.subscribe('mmwave-office/sensor/_all_target_counts/state')
         else:
             print('Bad connection. Code:', rc)
 
@@ -58,6 +59,7 @@ def init_mqtt(app, socketio):
         global latest_room_message
         global mmwave_data
         try:
+
             payload = message.payload.decode().strip()
             topic = message.topic
 
@@ -81,6 +83,8 @@ def init_mqtt(app, socketio):
                     mmwave_data['office']['angle'] = float(payload)
                 elif '_target1_direction' in topic:
                     mmwave_data['office']['direction'] = payload
+                elif '_all_target_counts' in topic:
+                    mmwave_data['office']['target_count'] = payload
                 print(f"Updated mmWave office data: {mmwave_data['office']}")
                 socketio.emit('update_mmwave', {'location': 'office', 'data': mmwave_data['office']})
                 return
@@ -94,6 +98,8 @@ def init_mqtt(app, socketio):
                     mmwave_data['kitchen']['angle'] = float(payload)
                 elif '_target1_direction' in topic:
                     mmwave_data['kitchen']['direction'] = payload
+                elif '_all_target_counts' in topic:
+                    mmwave_data['kitchen']['target_count'] = int(payload)
                 print(f"Updated mmWave kitchen data: {mmwave_data['kitchen']}")
                 socketio.emit('update_mmwave', {'location': 'kitchen', 'data': mmwave_data['kitchen']})
                 return

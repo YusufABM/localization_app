@@ -69,61 +69,105 @@ export function startPositionUpdates(mapHeight) {
     //await fetchLatestRoom();
     //await fetchLatestPosition();
     await fetchLatestMmwaveData();
-    updateLatestPosition(mapHeight); // Update position and room name
-    renderMmwaveSensors(); // Update mmWave sensor readings
+    //updateLatestPosition(mapHeight); // Update position and room name
+    renderMmwaveSensors(mapHeight); // Update mmWave sensor readings
   }, 200);
+}
+
+function mapAngle(input) {
+  // Shift input range from [-60, 60] to [0, 120]
+  const shiftedInput = input + 60;
+
+  // Normalize to [0, 1]
+  const normalizedInput = shiftedInput / 120;
+
+  // Scale to [0, 120]
+  const mappedValue = normalizedInput * 120;
+
+  return mappedValue;
 }
 
 // Function to render mmWave sensor readings
 let hue = 0;
 
-export function renderMmwaveSensors() {
+export function renderMmwaveSensors(mapHeight) {
   const sensors = Object.keys(latestMmwaveData);
-  sensors.forEach(sensor => {
+
+  // Bind sensor data to circle elements
+  const sensorData = sensors.map(sensor => {
     const data = latestMmwaveData[sensor];
     const radar = radarPositions[sensor];
 
-    if (!data || !radar) {
-      console.warn(`No data or radar position for sensor: ${sensor}`);
-      return;
+    if (!data || !radar || (data.x === 0 && data.y === 0) || data.target_count === 0) {
+      return null;
     }
-    // Convert distance to meters
-    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000; // Convert mm to meters
 
-    // Adjust angle for radar's mounting orientation (45°) and direction
-    let effectiveAngle = 180; // Radar's fixed mounting angle
-    if (data.direction === 'Left') {
-      effectiveAngle -= data.angle; // Subtract angle for 'Left'
-    } else if (data.direction === 'Right') {
-      effectiveAngle += data.angle; // Add angle for 'Right'
-    }
+    // Calculate distance from radar to target and convert to meters
+    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000;
+    let effectiveAngle = radar.orientation;
+    let actualangle = mapAngle(data.angle);
+
+    //actualangle += actualangle;
+    effectiveAngle += actualangle;
+    //effectiveAngle = effectiveAngle % 120;
+
     const angleInRadians = effectiveAngle * (Math.PI / 180);
+
 
     // Transform polar coordinates into global Cartesian coordinates
     const calculatedX = radar.x + distance * Math.cos(angleInRadians);
     const calculatedY = radar.y + distance * Math.sin(angleInRadians);
 
-    // Debugging output
+    /* Debugging output
     console.log(
       `Sensor: ${sensor}, Distance: ${distance.toFixed(2)} meters, ` +
       `Effective Angle: ${effectiveAngle.toFixed(2)}°, ` +
       `X: ${calculatedX.toFixed(2)} meters, Y: ${calculatedY.toFixed(2)} meters`
+    );*/
+
+    console.log(
+      `Sensor: ${sensor}, Distance: ${distance.toFixed(2)} meters, ` +
+      `Effective Angle: ${effectiveAngle.toFixed(2)}°, ` + 'Actual Angle: ' + actualangle.toFixed(2) + '°, '
     );
 
-    // Render the calculated position as a circle with changing hue
-    g.append("circle")
-      .attr("cx", calculatedX * scaleFactor)
-      .attr("cy", mapHeight - calculatedY * scaleFactor)
-      .attr("r", 5)
-      .attr("fill", `hsl(${hue}, 100%, 50%)`)
-      .attr("fill-opacity", 0.6)
-      .attr("stroke", "black")
-      .attr("stroke-width", 1);
+    return {
+      id: sensor,
+      x: calculatedX * scaleFactor,
+      y: mapHeight - calculatedY * scaleFactor,
+    };
+  }).filter(Boolean); // Filter out null or undefined sensors
 
-    // Increment hue for next circle
-    hue = (hue + 5) % 360;
-  });
+  // Bind data to circles
+  const circles = g.selectAll("circle")
+    .data(sensorData, d => d.id);
+
+
+  // Update existing circles
+  circles
+    .transition()
+    .duration(500)
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y);
+
+  // Enter new circles
+  circles.enter()
+    .append("circle")
+    .attr("cx", d => d.x)
+    .attr("cy", d => d.y)
+    .attr("r", 5)
+    .attr("fill", `hsl(${hue}, 100%, 50%)`)
+    .attr("fill-opacity", 0.6)
+    .attr("stroke", "black")
+    .attr("stroke-width", 1);
+
+  // Remove circles not in the current data
+  circles.exit().remove();
+
+  // Increment hue for next update
+  hue = (hue + 5) % 360;
 }
+
+
 
 
 // Render rooms
@@ -187,15 +231,17 @@ export function renderNodes(nodes) {
 
 // Render mmWave sensors as half-circles
 export function renderSensors(radarPositions) {
-  radarPositions.forEach(sensor => {
-    const position = sensor.position;
+  (Array.isArray(radarPositions) ? radarPositions : Object.values(radarPositions)).forEach(sensor => {
+    const position = [sensor.x, sensor.y];
+    const startAngle = (sensor.orientation - 120) * (Math.PI / 180);
+    const endAngle = (sensor.orientation + 120) * (Math.PI / 180);
     if (position && position.length >= 2) {
       g.append("path")
         .attr("d", d3.arc()({
           innerRadius: 4,
           outerRadius: 10,
-          startAngle: Math.PI,
-          endAngle: -Math.PI
+          startAngle: startAngle,
+          endAngle: endAngle
         }))
         .attr("transform", `translate(${position[0] * scaleFactor}, ${mapHeight - position[1] * scaleFactor})`)
         .attr("fill", "blue")
