@@ -48,7 +48,7 @@ def init_mqtt(app, socketio):
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_y/state')
             mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_angle/state')
             mqtt_client.subscribe('mmwave-office/sensor/_target1_direction/state')
-            # Add other subscriptions as needed
+            mqtt_client.subscribe('mmwave-kitchen/sensor/_target1_direction/state')
         else:
             print('Bad connection. Code:', rc)
 
@@ -92,6 +92,8 @@ def init_mqtt(app, socketio):
                     mmwave_data['kitchen']['y'] = float(payload)
                 elif '_target1_angle' in topic:
                     mmwave_data['kitchen']['angle'] = float(payload)
+                elif '_target1_direction' in topic:
+                    mmwave_data['kitchen']['direction'] = payload
                 print(f"Updated mmWave kitchen data: {mmwave_data['kitchen']}")
                 socketio.emit('update_mmwave', {'location': 'kitchen', 'data': mmwave_data['kitchen']})
                 return

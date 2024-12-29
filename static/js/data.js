@@ -1,8 +1,8 @@
 export const latestRoom = { room: "Office" };
 export const latestPosition = { x: 0, y: 0 };
 export let latestMmwaveData = {
-  office: { x: 0, y: 0, angle: 0, direction: "" }
-  //kitchen: { x: 0, y: 0, angle: 0 }
+  office: { x: 0, y: 0, angle: 0, direction: "" },
+  kitchen: { x: 0, y: 0, angle: 0, directuin: "" }
 };
 
 export const floor = [
@@ -194,7 +194,7 @@ export const nodes = [
 
 // Radar positions and orientations
 export const radarPositions = {
-  office: { x: 7.5, y: 11.8, orientation: 180 }
+  office: { x: 7.55, y: 11.3, orientation: 90 }
   //kitchen: { x: 7.5, y: 2.92, orientation: 45 }
 };
 

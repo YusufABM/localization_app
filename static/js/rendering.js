@@ -75,6 +75,8 @@ export function startPositionUpdates(mapHeight) {
 }
 
 // Function to render mmWave sensor readings
+let hue = 0;
+
 export function renderMmwaveSensors() {
   const sensors = Object.keys(latestMmwaveData);
   sensors.forEach(sensor => {
@@ -85,47 +87,45 @@ export function renderMmwaveSensors() {
       console.warn(`No data or radar position for sensor: ${sensor}`);
       return;
     }
+    // Convert distance to meters
+    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000; // Convert mm to meters
 
-    // Correct distance calculation
-    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000; // Convert to meters
-
-    // Adjust angle based on direction and radar orientation
-    let adjustedAngle = data.angle;
+    // Adjust angle for radar's mounting orientation (45°) and direction
+    let effectiveAngle = 180; // Radar's fixed mounting angle
     if (data.direction === 'Left') {
-      adjustedAngle -= radar.orientation; // Adjust for radar's mounting angle
+      effectiveAngle -= data.angle; // Subtract angle for 'Left'
     } else if (data.direction === 'Right') {
-      adjustedAngle += radar.orientation; // Adjust for radar's mounting angle
-    } // 'Middle' keeps the angle as is
+      effectiveAngle += data.angle; // Add angle for 'Right'
+    }
+    const angleInRadians = effectiveAngle * (Math.PI / 180);
 
-    const angleInRadians = adjustedAngle * (Math.PI / 180);
-
-    // Calculate global x and y based on radar position, distance, and corrected angle
+    // Transform polar coordinates into global Cartesian coordinates
     const calculatedX = radar.x + distance * Math.cos(angleInRadians);
     const calculatedY = radar.y + distance * Math.sin(angleInRadians);
 
     // Debugging output
-    console.log(`Sensor: ${sensor}, Distance: ${distance.toFixed(2)} meters, X: ${calculatedX.toFixed(2)} meters, Y: ${calculatedY.toFixed(2)} meters`);
+    console.log(
+      `Sensor: ${sensor}, Distance: ${distance.toFixed(2)} meters, ` +
+      `Effective Angle: ${effectiveAngle.toFixed(2)}°, ` +
+      `X: ${calculatedX.toFixed(2)} meters, Y: ${calculatedY.toFixed(2)} meters`
+    );
 
-    // Render the calculated position as a circle
+    // Render the calculated position as a circle with changing hue
     g.append("circle")
       .attr("cx", calculatedX * scaleFactor)
       .attr("cy", mapHeight - calculatedY * scaleFactor)
       .attr("r", 5)
-      .attr("fill", "red")
+      .attr("fill", `hsl(${hue}, 100%, 50%)`)
       .attr("fill-opacity", 0.6)
       .attr("stroke", "black")
       .attr("stroke-width", 1);
 
-    /* Render a line from the radar to the calculated position
-    g.append("line")
-      .attr("x1", radar.x * scaleFactor)
-      .attr("y1", mapHeight - radar.y * scaleFactor)
-      .attr("x2", calculatedX * scaleFactor)
-      .attr("y2", mapHeight - calculatedY * scaleFactor)
-      .attr("stroke", "red")
-      .attr("stroke-width", 2);*/
+    // Increment hue for next circle
+    hue = (hue + 5) % 360;
   });
 }
+
+
 // Render rooms
 export function renderRooms(rooms) {
   rooms.forEach(room => {
