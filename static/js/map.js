@@ -2,7 +2,7 @@
 // Import data from data.js
 import { floor, furniture, nodes, radarPositions} from "./data.js";
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { renderBounds, renderFurniture, renderRooms, renderNodes, renderSensors, renderRoomButtons, startPositionUpdates, renderMmwaveSensors } from "./rendering.js";
+import { renderRoomButtonsSingle, renderBounds, renderFurniture, renderRooms, renderNodes, renderSensors, renderRoomButtons, startPositionUpdates, renderMmwaveSensors } from "./rendering.js";
 
 // Config and scaling
 const width = window.innerWidth;
@@ -54,7 +54,8 @@ renderBounds(floor[0].bounds);
 renderFurniture(furniture);
 renderRooms(floor[0].rooms);
 //renderNodes(nodes);
-renderSensors(radarPositions);
+//renderSensors(radarPositions);
+renderRoomButtonsSingle(floor[0].rooms);
 
 // Render buttons for each room
 //renderRoomButtons(floor[0].rooms, buttonCounts);

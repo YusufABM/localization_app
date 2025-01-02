@@ -2,3 +2,5 @@ venv/
 secrets/
 .vscode/
 __pycache__/
+*.pyc
+*.db

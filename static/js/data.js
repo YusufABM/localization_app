@@ -4,6 +4,7 @@ export let latestMmwaveData = {
   office: { x: 0, y: 0, angle: 0, direction: "", target_count: 0 },
   kitchen: { x: 0, y: 0, angle: 0, directuin: "", target_count: 0 }
 };
+export const latestHybridPosition = {x: 0, y: 0, room: "Unkown", source: "Unknown"};
 
 export const floor = [
   {
@@ -43,6 +44,9 @@ export const floor = [
     ]
   }
 ];
+
+
+
 
 // Furniture data for the first floor
 export const furniture = [
@@ -332,6 +336,31 @@ export async function fetchLatestPosition() {
   }
 }
 
+export async function fetchLatestHybridPosition() {
+  try {
+    const response = await fetch('/hybrid_position');
+    const data = await response.json();
+
+    // Log the full data for debugging
+    console.log('Hybrid Position Response:', data);
+
+    // Correctly access nested data
+    if (data.room && data.x && data.y) {
+      latestHybridPosition.x = data.x;
+      latestHybridPosition.y = data.y;
+      latestHybridPosition.room = data.room;
+      latestHybridPosition.source = data.source;
+    }
+
+    // Log updated position and room for debugging
+    //console.log('Updated Hybrid Position:', latestHybridPosition.x, latestHybridPosition.y);
+    //console.log('Updated Room:', latestHybridPosition.room);
+  } catch (error) {
+    console.error('Error fetching latest hybrid position:', error);
+  }
+}
+
+
 // Update the latest room estimate on the map
 export async function fetchLatestRoom() {
   try {
@@ -349,13 +378,27 @@ export async function fetchLatestMmwaveData() {
   try {
     const response = await fetch('/latest_mmwave');
     const data = await response.json();
-    console.log(data);
+    //console.log(data);
     latestMmwaveData = data;
-    //console.log(`DATA mmWave: ${latestMmwaveData}`);
+    //Sconsole.log(`DATA mmWave: ${latestMmwaveData.office.x}`, latestMmwaveData.office.y, latestMmwaveData.office.angle, latestMmwaveData.office.direction, latestMmwaveData.office.target_count);
   } catch (error) {
     console.error('Error fetching latest mmWave data:', error);
   }
 }
+
+function mapAngle(input) {
+  // Shift input range from [-60, 60] to [0, 120]
+  const shiftedInput = input + 60;
+
+  // Normalize to [0, 1]
+  const normalizedInput = shiftedInput / 120;
+
+  // Scale to [0, 120]
+  const mappedValue = normalizedInput * 120;
+
+  return mappedValue;
+}
+
 
 export function searchButtonsOnLine(position, room, roomPositions) {
   const [x, y] = position;

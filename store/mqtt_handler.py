@@ -14,6 +14,7 @@ mmwave_data = {
     "kitchen": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown", "target_count": 0}
 }
 
+
 mqtt_client = Mqtt()
 
 def load_secrets():
@@ -70,7 +71,7 @@ def init_mqtt(app, socketio):
             if payload in ["Hallway", "Office", "Kitchen"]:
                 with latest_room_message.get_lock():  # Thread-safe update
                     latest_room_message.value = payload.encode('utf-8')
-                print(f"MQTTS Room Message: {latest_room_message}")
+                #print(f"MQTTS Room Message: {latest_room_message}")
                 socketio.emit('update_room', {'room': latest_room_message.value.decode('utf-8')})
                 return
 
@@ -85,7 +86,7 @@ def init_mqtt(app, socketio):
                     mmwave_data['office']['direction'] = payload
                 elif '_all_target_counts' in topic:
                     mmwave_data['office']['target_count'] = payload
-                print(f"Updated mmWave office data: {mmwave_data['office']}")
+                #print(f"Updated mmWave office data: {mmwave_data['office']}")
                 socketio.emit('update_mmwave', {'location': 'office', 'data': mmwave_data['office']})
                 return
 
@@ -100,14 +101,14 @@ def init_mqtt(app, socketio):
                     mmwave_data['kitchen']['direction'] = payload
                 elif '_all_target_counts' in topic:
                     mmwave_data['kitchen']['target_count'] = int(payload)
-                print(f"Updated mmWave kitchen data: {mmwave_data['kitchen']}")
+                #print(f"Updated mmWave kitchen data: {mmwave_data['kitchen']}")
                 socketio.emit('update_mmwave', {'location': 'kitchen', 'data': mmwave_data['kitchen']})
                 return
 
             data = json.loads(payload)
             latest_ble_data["x"] = data.get("x", 0)
             latest_ble_data["y"] = data.get("y", 0)
-            print(f"Updated BLE data: {latest_ble_data}")
+            #print(f"Updated BLE data: {latest_ble_data}")
             socketio.emit('update_ble', latest_ble_data)
 
         except json.JSONDecodeError as e:
