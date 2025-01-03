@@ -14,7 +14,6 @@ mmwave_data = {
     "kitchen": {"x": 0, "y": 0, "angle": 0, "direction": "Unknown", "target_count": 0}
 }
 
-
 mqtt_client = Mqtt()
 
 def load_secrets():
@@ -68,7 +67,7 @@ def init_mqtt(app, socketio):
                 print(f"First Floor message received. Skipping...'{payload}'")
                 return
 
-            if payload in ["Hallway", "Office", "Kitchen"]:
+            if payload in ["Hallway", "Office"]:
                 with latest_room_message.get_lock():  # Thread-safe update
                     latest_room_message.value = payload.encode('utf-8')
                 #print(f"MQTTS Room Message: {latest_room_message}")

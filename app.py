@@ -90,29 +90,31 @@ def update_mmwave():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/save_data', methods=['POST'])
-def save_data():
-    data = request.json
+@app.route('/save_time_difference', methods=['POST'])
+def save_time_difference():
     try:
-        db_handler.insert_localization_data(
-            source=data['source'],
+        data = request.get_json()
+        if 'room' not in data or 'time_difference_ms' not in data or 'source' not in data:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+        db_handler.insert_time_difference(
             room=data['room'],
-            x=data['x'],
-            y=data['y']
+            time_difference_ms=int(data['time_difference_ms']),
+            source=data['source']
         )
-        print("Data saved to database:", data)
+        print("Time difference saved to database:", data)
         return jsonify({"status": "success", "data": data})
     except Exception as e:
-        print("Error saving data to database:", str(e))
+        print("Error saving time difference to database:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get_data', methods=['GET'])
-def get_data():
+@app.route('/get_time_differences', methods=['GET'])
+def get_time_differences():
     try:
-        data = db_handler.fetch_all_data()
+        data = db_handler.fetch_all_time_differences()
         return jsonify(data)
     except Exception as e:
-        print("Error fetching data from database:", str(e))
+        print("Error fetching time differences from database:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':

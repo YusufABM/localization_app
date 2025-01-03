@@ -1,8 +1,8 @@
 export const latestRoom = { room: "Office" };
-export const latestPosition = { x: 0, y: 0 };
+export const latestBLEPosition = { x: 0, y: 0 };
 export let latestMmwaveData = {
-  office: { x: 0, y: 0, angle: 0, direction: "", target_count: 0 },
-  kitchen: { x: 0, y: 0, angle: 0, directuin: "", target_count: 0 }
+  office: { x: 0, y: 0, angle: 0, direction: "", target_count: 0, lastUpdated: 0 },
+  kitchen: { x: 0, y: 0, angle: 0, direction: "", target_count: 0, lastUpdated: 0 }
 };
 export const latestHybridPosition = {x: 0, y: 0, room: "Unkown", source: "Unknown"};
 
@@ -12,7 +12,7 @@ export const floor = [
     bounds: [[0, 0], [7.55, 11.84]], // Map bounds in meters
     rooms: [
       {
-        id: "hallway",
+        id: "Hallway",
         name: "Hallway",
         shade: "#eeeee4",
         points: [
@@ -198,7 +198,7 @@ export const nodes = [
 
 // Radar positions and orientations
 export const radarPositions = {
-  office: { x: 7.45, y: 11.9, orientation: 165 },
+  office: { x: 7.45, y: 11.3, orientation: 120 },
   kitchen: { x: 7.45, y: 2.92, orientation: 120 }
 };
 
@@ -324,13 +324,13 @@ export function calculateButtonPosition(button, room) {
 }
 
 // Update latest position on the map
-export async function fetchLatestPosition() {
+export async function fetchLatestBLE() {
   try {
     const response = await fetch('/latest_position');
     const data = await response.json();
-    latestPosition.x = data.x;
-    latestPosition.y = data.y;
-    //console.log(`Updated Position - x: ${latestPosition.x}, y: ${latestPosition.y}`);
+    latestBLEPosition.x = data.x;
+    latestBLEPosition.y = data.y;
+    //console.log(`Updated Position - x: ${latestBLEPosition.x}, y: ${latestBLEPosition.y}`);
   } catch (error) {
     console.error('Error fetching latest position:', error);
   }
@@ -342,7 +342,7 @@ export async function fetchLatestHybridPosition() {
     const data = await response.json();
 
     // Log the full data for debugging
-    console.log('Hybrid Position Response:', data);
+    //console.log('Hybrid Position Response:', data);
 
     // Correctly access nested data
     if (data.room && data.x && data.y) {
@@ -376,11 +376,33 @@ export async function fetchLatestRoom() {
 // Update the latest mmWave data
 export async function fetchLatestMmwaveData() {
   try {
-    const response = await fetch('/latest_mmwave');
-    const data = await response.json();
-    //console.log(data);
-    latestMmwaveData = data;
-    //Sconsole.log(`DATA mmWave: ${latestMmwaveData.office.x}`, latestMmwaveData.office.y, latestMmwaveData.office.angle, latestMmwaveData.office.direction, latestMmwaveData.office.target_count);
+    const response = await fetch('/latest_mmwave'); // Fetch data from the endpoint
+    const data = await response.json(); // Parse the response as JSON
+
+    if (data.office) {
+      latestMmwaveData.office = {
+        ...latestMmwaveData.office,
+        ...data.office,
+        lastUpdated: Date.now(),
+      };
+      //console.log(`Office lastUpdated: ${latestMmwaveData.office.lastUpdated}`);
+    } else {
+      latestMmwaveData.office.lastUpdated = 0; // Reset if no data
+    }
+
+    if (data.kitchen) {
+      latestMmwaveData.kitchen = {
+        ...latestMmwaveData.kitchen,
+        ...data.kitchen,
+        lastUpdated: Date.now(),
+      };
+      //console.log(`Kitchen lastUpdated: ${latestMmwaveData.kitchen.lastUpdated}`);
+    } else {
+      latestMmwaveData.kitchen.lastUpdated = 0; // Reset if no data
+    }
+
+    // Log updated mmWave data for debugging
+    //console.log("Updated mmWave Data:", latestMmwaveData);
   } catch (error) {
     console.error('Error fetching latest mmWave data:', error);
   }
