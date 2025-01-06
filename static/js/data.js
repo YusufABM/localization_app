@@ -198,29 +198,29 @@ export const nodes = [
 
 // Radar positions and orientations
 export const radarPositions = {
-  office: { x: 7.45, y: 11.3, orientation: 120 },
+  office: { x: 7.45, y: 11.88, orientation: 120 },
   kitchen: { x: 7.45, y: 2.92, orientation: 120 }
 };
 
 // List of walls and their orientation
 export const walls = [
   {
-    room: "hallway",
+    room: "Hallway",
     points: [[0, 0], [0,11.84]],
     orientation: "west"
   },
   {
-    room: "hallway",
+    room: "Hallway",
     points: [[0, 11.84], [1.7, 11.84]],
     orientation: "north"
   },
   {
-    room: "hallway",
+    room: "Hallway",
     points: [[1.7, 11.84], [1.7, 0]],
     orientation: "east"
   },
   {
-    room: "hallway",
+    room: "Hallway",
     points: [[1.7, 0], [0, 0]],
     orientation: "south"
   },
@@ -295,7 +295,6 @@ export function distanceToLineSegment([px, py], [x1, y1], [x2, y2]) {
 
 export function calculateButtonPosition(button, room) {
   const [px, py] = button;
-
   // Filter walls to get only the walls belonging to the current room
   const roomWalls = walls.filter((wall) => wall.room === room.id);
 

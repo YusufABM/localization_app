@@ -22,16 +22,17 @@ export function startPositionUpdates(mapHeight) {
   setInterval(async () => {
     //await fetchLatestRoom();
     await fetchLatestBLE();
-    //await fetchLatestMmwaveData();
+    await fetchLatestMmwaveData();
     //await fetchLatestHybridPosition();
     //calculateMmwaveGlobalCoordinates(mapHeight);
-    //renderTargetCount(radarPositions);
+    renderTargetCount(radarPositions);
     //await syncMmwaveDataToBackend();
-     // Calculate mmWave global coordinates
+    // Calculate mmWave global coordinates
+    renderHybridLocalization(mapHeight); // Update hybrid position
     //renderHybridPosition(mapHeight); // Update hybrid position
-   renderBLE(mapHeight); // Update position and room name
-    //renderMmwaveSensors(mapHeight); // Update mmWave sensor readings
-  }, 100);
+  // renderBLE(mapHeight); // Update position and room name
+   //renderMmwaveSensors(mapHeight); // Update mmWave sensor readings
+  }, 50);
 }
 
 
@@ -68,7 +69,7 @@ export function renderBLE(mapHeight) {
   let roomText = g.select(".latest-room-text");
 
   let ble = { x : latestBLEPosition.x * scaleFactor, y : mapHeight - latestBLEPosition.y * scaleFactor, room : estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y)};
-  bleData = ble;
+  bleData = latestBLEPosition;
 
   if (positionDot.empty()) {
     // Append the circle if it doesn't exist
@@ -128,6 +129,8 @@ export function calculateMmwaveGlobalCoordinates(mapHeight) {
   sensors.forEach((sensor) => {
     const data = latestMmwaveData[sensor];
     const radar = radarPositions[sensor];
+    let globalX = 0;
+    let globalY = 0;
 
     if (!data || !radar || (data.x === 0 && data.y === 0)) {
       //console.warn(`Skipping sensor: ${sensor} - Invalid data or radar configuration`);
@@ -141,8 +144,19 @@ export function calculateMmwaveGlobalCoordinates(mapHeight) {
     const effectiveAngle = radar.orientation + mappedAngle;
     const angleInRadians = effectiveAngle * (Math.PI / 180);
 
-    let globalX = radar.x + distance * Math.cos(angleInRadians);
-    let globalY = radar.y + distance * Math.sin(angleInRadians);
+    globalX = radar.x + distance * Math.cos(angleInRadians);
+    globalY = radar.y + distance * Math.sin(angleInRadians);
+    //console.log("Global X:", globalX, "Global Y:", globalY);
+
+    if (latestMmwaveData[sensor].target_count > 0) {
+      mmWaveData = {
+        id: sensor,
+        x: globalX,
+        y: globalY,
+        targetCount: latestMmwaveData[sensor].target_count,
+        lastUpdated: latestMmwaveData[sensor].lastUpdated,
+      };
+    }
 
     if (isNaN(globalX) || isNaN(globalY)) {
       console.warn(`Invalid coordinates for sensor: ${sensor}`);
@@ -162,7 +176,7 @@ export function calculateMmwaveGlobalCoordinates(mapHeight) {
     //console.log(`Sensor: ${sensor}, Global X: ${globalX.toFixed(2)}, Global Y: ${globalY.toFixed(2)}`);
   });
 
- // console.log("Processed latestMmwaveData:", latestMmwaveData);
+  //console.log("Processed latestMmwaveData:", latestMmwaveData);
 }
 
 // Render target count for each radar sensor as texts
@@ -213,6 +227,7 @@ export function renderTargetCount(radarPositions) {
 export function renderMmwaveSensors(mapHeight) {
   calculateMmwaveGlobalCoordinates(mapHeight);
   const sensors = Object.keys(latestMmwaveData);
+  //console.log("Sensors:", latestMmwaveData);
 
   // Map sensor data to renderable objects, with validation
   const sensorData = sensors
@@ -243,14 +258,18 @@ export function renderMmwaveSensors(mapHeight) {
       .attr("font-weight", "bold")
       .attr("font-family", "Arial");
   }
-
   const lastSensor = sensorData[sensorData.length - 1];
-  const room = estimateUserRoom(lastSensor.x/ scaleFactor, (mapHeight - lastSensor.y) / scaleFactor);
-
+  let room = "Unknown";
+  if (lastSensor) {
+    room = estimateUserRoom( mmWaveData["x"], mmWaveData["y"]);
+  }
+  //console.log("Room:", room);
+  //console.log("DATA:", mmWaveData[sensors]);
+  //console.log("Sensor Data:", globalX, globalY);
   // Update existing circles
   circles
     .transition()
-    .duration(200)
+    .duration(100)
     .attr("cx", (d) => d.x)
     .attr("cy", (d) => d.y);
 
@@ -269,27 +288,13 @@ export function renderMmwaveSensors(mapHeight) {
   // Update room text
   if (lastSensor) {
     roomText
-      .attr("x", lastSensor.x)
-      .attr("y", lastSensor.y - 10)
+      .attr("x", mmWaveData.x)
+      .attr("y", mmWaveData.y - 10)
       .text(room);
   }
   // Remove circles not in the current data
   circles.exit().remove();
 
-  // Update the latest mmWave data
-  if (sensorData.length > 0) {
-    const lastSensor = sensorData[sensorData.length - 1];
-    mmWaveData = {
-      id: lastSensor.id,
-      x: lastSensor.x / scaleFactor,
-      y: (mapHeight - lastSensor.y) / scaleFactor,
-    };
-
-    // Debug log for updated mmWaveData
-    //console.log(`Updated mmWaveData: ${JSON.stringify(mmWaveData)}`);
-  } else {
-    //console.warn("No valid sensors found to update mmWaveData.");
-  }
 
   // Increment hue for next update
   hue = (hue + 5) % 360;
@@ -360,7 +365,7 @@ export function renderRooms(rooms) {
       .style("font-size", "16px")
       .style("font-weight", "bold")
       .style("font-family", "Arial")
-      .attr("transform", room.name === "Hallway" ? `rotate(-90, ${centroid[0]}, ${centroid[1]})` : null)
+      .attr("transform", room.name === "Hallway" ? `rotate(-90, ${centroid[0] - 10}, ${centroid[1] + 10})` : null)
       .text('['+room.name+']');
   });
 }
@@ -399,15 +404,13 @@ export function renderNodes(nodes) {
 export function renderSensors(radarPositions) {
   (Array.isArray(radarPositions) ? radarPositions : Object.values(radarPositions)).forEach(sensor => {
     const position = [sensor.x, sensor.y];
-    const startAngle = (sensor.orientation - 120) * (Math.PI / 180);
-    const endAngle = (sensor.orientation + 120) * (Math.PI / 180);
     if (position && position.length >= 2) {
       g.append("path")
         .attr("d", d3.arc()({
           innerRadius: 4,
           outerRadius: 10,
-          startAngle: startAngle,
-          endAngle: endAngle
+          startAngle:  Math.PI * 2 ,
+          endAngle: 0
         }))
         .attr("transform", `translate(${position[0] * scaleFactor}, ${mapHeight - position[1] * scaleFactor})`)
         .attr("fill", "blue")
@@ -491,45 +494,80 @@ function isInsideRoom(point, room) {
   return d3.polygonContains(room.points, point);
 }
 
+
+
 export function renderRoomButtons(rooms, buttonCounts) {
+  const clickedButtons = new Set(); // To track clicked buttons
+
   rooms.forEach((room) => {
     const roomButtons = buttonCounts[room.id] || 0;
-    const roomPositions = generateButtonPositions(room, roomButtons);
+    let roomPositions;
+
+    if (room.id === "Hallway") {
+      const [[xMin, yMin], [xMax, yMax]] = calculatePolygonBounds(room.points);
+      const roomHeight = yMax - yMin;
+      const yStep = roomHeight / roomButtons;
+
+      roomPositions = Array.from({ length: roomButtons }, (_, i) => [
+        (xMin + xMax) / 2, // Center x position
+        yMin + i * yStep + yStep / 2, // Evenly spaced y positions
+      ]);
+    } else {
+      roomPositions = generateButtonPositions(room, roomButtons);
+    }
 
     // Render buttons for this room
     roomPositions.forEach((position) => {
       const [x, y] = position;
+      const buttonKey = `${room.id}-${x.toFixed(2)}-${y.toFixed(2)}`;
+
+      // Determine initial color based on clicked state
+      const initialColor = clickedButtons.has(buttonKey) ? "green" : "blue";
 
       // Append the button (circle)
       g.append("circle")
         .attr("cx", x * scaleFactor)
         .attr("cy", mapHeight - y * scaleFactor)
         .attr("r", 5)
-        .attr("fill", "blue")
+        .attr("fill", initialColor)
         .attr("cursor", "pointer")
-        .on("click", function () {
-          // Log button click
-          calculateButtonPosition(position, room);
+        .on("click", async function () {
+          if (clickedButtons.has(buttonKey)) {
+            console.log(`Button already clicked: ${buttonKey}`);
+            return; // Ignore if already clicked
+          }
 
-          // Get row and column counts and distances within the same room
-          const { buttonsInRow, buttonsInColumn, distanceToNextInRow, distanceToNextInColumn } =
-            searchButtonsOnLine(position, room, roomPositions);
+          clickedButtons.add(buttonKey); // Mark button as clicked
+          const timestamp = new Date().toISOString();
+          //const mmWaveReading = Object.values(bleData).find));
 
-          console.log(
-              `- ${buttonsInRow} buttons in the same row, next at ${distanceToNextInRow.toFixed(2)}m.\n` +
-              `- ${buttonsInColumn} buttons in the same column, next at ${distanceToNextInColumn.toFixed(2)}m.`
-          );
+          const dataToSave = {
+            button_x: x.toFixed(2),
+            button_y: y.toFixed(2),
+            mmwave_x: bleData.x.toFixed(2) || null,
+            mmwave_y: bleData?.y.toFixed(2) || null,
+            timestamp,
+          };
 
-          // Add visual feedback
-          d3.select(this)
-            .transition()
-            .duration(100)
-            .attr("fill", "red")
-            .attr("r", 8)
-            .transition()
-            .duration(200)
-            .attr("fill", "blue")
-            .attr("r", 5);
+          console.log("Saving data:", dataToSave);
+
+          try {
+            const response = await fetch("/save_button_click", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(dataToSave),
+            });
+
+            const result = await response.json();
+            console.log("Data saved successfully:", result);
+          } catch (error) {
+            console.error("Error saving data:", error);
+          }
+
+          // Change color permanently after click
+          d3.select(this).attr("fill", "green");
         });
     });
   });
@@ -554,9 +592,11 @@ export function estimateUserRoom(x, y) {
     }
   }
 
-  console.warn(`Coordinates (${x}, ${y}) are outside known room bounds.`);
+  //console.warn(`Coordinates (${x}, ${y}) are outside known room bounds.`);
   return "Unknown"; // Default if no match is found
 }
+
+
 
 export function renderRoomButtonsSingle(rooms) {
   rooms.forEach((room) => {
@@ -588,7 +628,7 @@ export function renderRoomButtonsSingle(rooms) {
 
         // Check periodically for valid sensor data
         const intervalId = setInterval(() => {
-          const detectedRoom = estimateUserRoom(mmWaveData.x, mmWaveData.y); // Declare detectedRoom
+          const detectedRoom = estimateUserRoom(bleData.x, bleData.y)
           console.log(`Detected Room: ${detectedRoom || "waiting for valid data"}`);
           console.log("Room ID:", room.id);
           if (detectedRoom === room.id) {
@@ -640,6 +680,187 @@ export function renderRoomButtonsSingle(rooms) {
           .transition()
           .duration(200)
           .attr("fill", "blue");
+      });
+  });
+}
+
+
+export function renderHybridLocalization(mapHeight) {
+  calculateMmwaveGlobalCoordinates(mapHeight);
+  const sensors = Object.keys(latestMmwaveData);
+  let ble = { x : latestBLEPosition.x * scaleFactor, y : mapHeight - latestBLEPosition.y * scaleFactor, room : estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y)};
+  bleData = latestBLEPosition;
+  // Check if any mmWave sensor is valid
+  const validMmwaveSensor = sensors.some(sensor => {
+    const data = latestMmwaveData[sensor];
+    return data?.target_count > 0 && Date.now() - data.lastUpdated <= 200;
+  });
+
+  let finalData = {};
+
+  if (validMmwaveSensor) {
+    // Use mmWave data if available
+    const sensorData = sensors
+      .map(sensor => {
+        const data = latestMmwaveData[sensor];
+        if (
+          data &&
+          typeof data.globalX === "number" &&
+          typeof data.globalY === "number" &&
+          data.target_count > 0 &&
+          Date.now() - data.lastUpdated <= 200
+        ) {
+          return { id: sensor, x: data.globalX, y: data.globalY };
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (sensorData.length > 0) {
+      const lastSensor = sensorData[sensorData.length - 1];
+      const room = estimateUserRoom(mmWaveData.x, mmWaveData.y);
+
+      if (room !== "Unknown" && validateBleInRoom(bleData.x, bleData.y, room)) {
+        finalData = {
+          x: lastSensor.x,
+          y: lastSensor.y,
+          room,
+          label: "Yusuf",
+        };
+      } else {
+        finalData = {
+          x: lastSensor.x,
+          y: lastSensor.y,
+          room,
+          label: "Unknown",
+        };
+      }
+    }
+  } else {
+    // Fallback to BLE data
+    finalData = {
+      x: latestBLEPosition.x * scaleFactor,
+      y: mapHeight - latestBLEPosition.y * scaleFactor,
+      room: estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y),
+      label: "Yusuf",
+    };
+  }
+
+  renderHybridDot(finalData, mapHeight);
+}
+
+function renderHybridDot(data, mapHeight) {
+  let positionDot = g.select(".hybrid-position-dot");
+  let roomText = g.select(".hybrid-room-text");
+
+  if (positionDot.empty()) {
+    positionDot = g.append("circle")
+      .attr("class", "hybrid-position-dot")
+      .attr("r", 5)
+      .attr("fill", "Green");
+  }
+
+  if (roomText.empty()) {
+    roomText = g.append("text")
+      .attr("class", "hybrid-room-text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", "16px")
+      .attr("fill", "black")
+      .attr("font-weight", "bold")
+      .attr("font-family", "Arial");
+  }
+
+  positionDot
+    .attr("cx", data.x)
+    .attr("cy", data.y);
+
+  roomText
+    .attr("x", data.x)
+    .attr("y", data.y - 10)
+    .text(data.label);
+}
+
+function validateBleInRoom(x, y, room) {
+  const floor_data = [
+    { id: "Office", bounds: [[1.7, 8.99], [7.55, 11.84]] },
+    { id: "Kitchen", bounds: [[1.7, 0], [7.55, 5.85]] },
+    { id: "Hallway", bounds: [[0, 0], [1.85, 11.84]] },
+  ];
+
+  const roomData = floor_data.find(r => r.id === room);
+  if (!roomData) return false;
+
+  const [[xMin, yMin], [xMax, yMax]] = roomData.bounds;
+  const borderOffset = 20 / scaleFactor;
+
+  return (
+    x >= xMin - borderOffset &&
+    x <= xMax + borderOffset &&
+    y >= yMin - borderOffset &&
+    y <= yMax + borderOffset
+  );
+}
+
+// Fetch button data from the server and render it on the map
+export async function fetchAndRenderButtonData() {
+  try {
+    const response = await fetch("get_button_click_data");
+    const jsonResponse = await response.json();
+
+    // Access the 'data' array from the response
+    const buttonData = jsonResponse.data;
+
+    renderSavedButtonData(buttonData);
+  } catch (error) {
+    console.error("Error fetching button data:", error);
+  }
+}
+
+// Render saved button clicks and lines connecting button and mmWave data
+export function renderSavedButtonData(buttonData) {
+  buttonData.forEach(data => {
+    const { button_x, button_y, mmwave_x, mmwave_y } = data;
+
+    // Handle cases where mmWave data might be missing
+    const buttonColor = (mmwave_x != null && mmwave_y != null) ? "green" : "blue";
+
+    // Render a line connecting button and mmWave data if mmWave data is available
+    if (mmwave_x != null && mmwave_y != null) {
+      g.append("line")
+        .attr("x1", button_x * scaleFactor)
+        .attr("y1", mapHeight - button_y * scaleFactor)
+        .attr("x2", mmwave_x * scaleFactor)
+        .attr("y2", mapHeight - mmwave_y * scaleFactor)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .attr("stroke-opacity", 0.5)
+        .attr("stroke-dasharray", "5,5");
+
+      // Render mmWave sensor data point
+      g.append("circle")
+        .attr("cx", mmwave_x * scaleFactor)
+        .attr("cy", mapHeight - mmwave_y * scaleFactor)
+        .attr("r", 5)
+        .attr("stroke", "black")
+        .attr("stroke-width", 0.5)
+        .attr("fill", "blue")
+        .attr("fill-opacity", 0.4);
+    }
+
+    // Render button data point
+    g.append("circle")
+      .attr("cx", button_x * scaleFactor)
+      .attr("cy", mapHeight - button_y * scaleFactor)
+      .attr("r", 5)
+      .attr("fill", "blue")
+      .attr("stroke-dasharray", "2.2")
+      .attr("stroke-width", 1)
+      .attr("stroke", "black")
+      .attr("fill-opacity", 0.1)
+      .attr("stroke-opacity", 0.5)
+      .attr("cursor", "pointer")
+      .on("click", function () {
+        console.log("Button data clicked:", data);
       });
   });
 }

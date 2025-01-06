@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 class DatabaseHandler:
-    def __init__(self, db_name="mmWave_latency.db"):
+    def __init__(self, db_name="mmWave_accuracy.db"):
         self.db_name = db_name
         self._ensure_db_exists()
 
@@ -17,15 +17,26 @@ class DatabaseHandler:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS time_differences (
+                CREATE TABLE IF NOT EXISTS button_clicks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    room TEXT NOT NULL,
-                    time_difference_ms INTEGER NOT NULL,
-                    source TEXT NOT NULL,
+                    button_x REAL NOT NULL,
+                    button_y REAL NOT NULL,
+                    mmwave_x REAL,
+                    mmwave_y REAL,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-        conn.commit()
+            conn.commit()
+
+    def insert_button_click(self, button_x, button_y, mmwave_x, mmwave_y, timestamp):
+        """Inserts button click data into the database."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO button_clicks (button_x, button_y, mmwave_x, mmwave_y, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, (button_x, button_y, mmwave_x, mmwave_y, timestamp))
+            conn.commit()
 
     def _get_connection(self):
         """Creates and returns a new database connection."""
@@ -50,5 +61,16 @@ class DatabaseHandler:
             rows = cursor.fetchall()
             return [
                 {"id": row[0], "room": row[1], "time_difference_ms": row[2], "timestamp": row[3]}
+                for row in rows
+            ]
+
+    def get_button_click_data(self):
+        """Fetches all button click data from the database."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM button_clicks")
+            rows = cursor.fetchall()
+            return [
+                {"id": row[0], "button_x": row[1], "button_y": row[2], "mmwave_x": row[3], "mmwave_y": row[4], "timestamp": row[5]}
                 for row in rows
             ]

@@ -108,14 +108,41 @@ def save_time_difference():
         print("Error saving time difference to database:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get_time_differences', methods=['GET'])
-def get_time_differences():
+
+
+@app.route('/save_button_click', methods=['POST'])
+def save_button_click():
     try:
-        data = db_handler.fetch_all_time_differences()
-        return jsonify(data)
+        data = request.json
+        required_fields = ['button_x', 'button_y', 'mmwave_x', 'mmwave_y', 'timestamp']
+
+        if not all(field in data for field in required_fields):
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+        db_handler.insert_button_click(
+            button_x=float(data['button_x']),
+            button_y=float(data['button_y']),
+            mmwave_x=float(data['mmwave_x']) if data['mmwave_x'] else None,
+            mmwave_y=float(data['mmwave_y']) if data['mmwave_y'] else None,
+            timestamp=data['timestamp']
+        )
+
+        print("Button click data saved to database:", data)
+        return jsonify({"status": "success", "data": data})
     except Exception as e:
-        print("Error fetching time differences from database:", str(e))
+        print("Error saving button click data to database:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
+
+#Get button click data from database
+@app.route('/get_button_click_data')
+def get_button_click_data():
+    try:
+        data = db_handler.get_button_click_data()
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        print("Error getting button click data from database:", str(e))
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)

@@ -2,7 +2,7 @@
 // Import data from data.js
 import { floor, furniture, nodes, radarPositions} from "./data.js";
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { renderTargetCount, renderRoomButtonsSingle, renderBounds, renderFurniture, renderRooms, renderNodes, renderSensors, renderRoomButtons, startPositionUpdates, renderMmwaveSensors } from "./rendering.js";
+import { fetchAndRenderButtonData, renderTargetCount, renderRoomButtonsSingle, renderBounds, renderFurniture, renderRooms, renderNodes, renderSensors, renderRoomButtons, startPositionUpdates, renderMmwaveSensors } from "./rendering.js";
 
 // Config and scaling
 const width = window.innerWidth;
@@ -18,7 +18,7 @@ const centerX = (width - mapWidth) / 2;
 const centerY = (height - mapHeight) / 2;
 
 const buttonCounts = {
-  hallway: 18,
+  Hallway: 10,
   Office: 32,
   Kitchen: 64
 };
@@ -53,12 +53,14 @@ const zoom = d3.zoom()
 renderBounds(floor[0].bounds);
 renderFurniture(furniture);
 renderRooms(floor[0].rooms);
-//renderNodes(nodes);
-//renderSensors(radarPositions);
-renderRoomButtonsSingle(floor[0].rooms);
+renderSensors(radarPositions);
+//renderRoomButtonsSingle(floor[0].rooms);
 // Render buttons for each room
 //renderRoomButtons(floor[0].rooms, buttonCounts);
-startPositionUpdates(mapHeight);
+fetchAndRenderButtonData();
+//startPositionUpdates(mapHeight);
+//renderNodes(nodes);
+
 
 // Apply the initial transform to the zoom behavior
 svg.call(zoom.transform, initialTransform);
