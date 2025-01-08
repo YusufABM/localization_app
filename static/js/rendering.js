@@ -26,173 +26,77 @@ export function startPositionUpdates(mapHeight) {
   }, 50);
 }
 
+//Render hybrid localization using BLE and mmWave data.
+export function renderHybridLocalization(mapHeight) {
+  let lastRoom = "Unknown";
 
-
-// Render bounds (map border)
-export function renderBounds(bounds) {
-  const [[xMin, yMin], [xMax, yMax]] = bounds;
-  g.append("rect")
-    .attr("x", xMin * scaleFactor)
-    .attr("y", yMin * scaleFactor)
-    .attr("width", (xMax - xMin) * scaleFactor)
-    .attr("height", (yMax - yMin) * scaleFactor)
-    .attr("fill", "none")
-    .attr("stroke", "#f5f7f7")
-    .attr("stroke-width", 0);
-}
-
-// Render latest position and room name on the map
-export function renderBLE(mapHeight) {
-  let positionDot = g.select(".latest-position-dot");
-  let roomText = g.select(".latest-room-text");
-
+  calculateMmwaveGlobalCoordinates(mapHeight);
+  const sensors = Object.keys(latestMmwaveData);
   let ble = { x : latestBLEPosition.x * scaleFactor, y : mapHeight - latestBLEPosition.y * scaleFactor, room : estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y)};
   bleData = latestBLEPosition;
-
-  if (positionDot.empty()) {
-    // Append the circle if it doesn't exist
-    positionDot = g.append("circle")
-      .attr("class", "latest-position-dot")
-      .attr("r", 5)
-      .attr("fill", "red");
-  }
-
-  if (roomText.empty()) {
-    // Append the room name text if it doesn't exist
-    roomText = g.append("text")
-      .attr("class", "latest-room-text")
-      .attr("text-anchor", "middle")
-      .attr("font-size", "16px")
-      .attr("fill", "black")
-      .attr("font-weight", "bold")
-      .attr("font-family", "Arial");
-  }
-
-  // Update the circle's position
-  positionDot
-    .attr("cx", ble.x)
-    .attr("cy", ble.y);
-
-
-  // Update the room name position and text
-  roomText
-    .attr("x", ble.x)
-    .attr("y", ble.y - 10)
-    .text(ble.room);
-}
-
-
-function mapAngle(input) {
-  // Shift input range from [-60, 60] to [0, 120]
-  const shiftedInput = input + 60;
-
-  // Normalize to [0, 1]
-  const normalizedInput = shiftedInput / 120;
-
-  // Scale to [0, 120]
-  const mappedValue = normalizedInput * 120;
-
-  return mappedValue;
-}
-
-
-
-/**
- * Perform mmWave calculations and update latestMmwaveData with global Cartesian coordinates.
- * @param {Object} mapHeight - The height of the map for coordinate inversion.
- */
-export function calculateMmwaveGlobalCoordinates(mapHeight) {
-  const sensors = Object.keys(latestMmwaveData);
-
-  sensors.forEach((sensor) => {
+  // Check if any mmWave sensor is valid
+  const validMmwaveSensor = sensors.some(sensor => {
     const data = latestMmwaveData[sensor];
-    const radar = radarPositions[sensor];
-    let globalX = 0;
-    let globalY = 0;
-
-    if (!data || !radar || (data.x === 0 && data.y === 0)) {
-      //console.warn(`Skipping sensor: ${sensor} - Invalid data or radar configuration`);
-      latestMmwaveData[sensor].globalX = null;
-      latestMmwaveData[sensor].globalY = null;
-      return;
-    }
-
-    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000; // Convert mm to meters
-    const mappedAngle = mapAngle(data.angle);
-    const effectiveAngle = radar.orientation + mappedAngle;
-    const angleInRadians = effectiveAngle * (Math.PI / 180);
-
-    globalX = radar.x + distance * Math.cos(angleInRadians);
-    globalY = radar.y + distance * Math.sin(angleInRadians);
-    //console.log("Global X:", globalX, "Global Y:", globalY);
-
-    if (latestMmwaveData[sensor].target_count > 0) {
-      mmWaveData = {
-        id: sensor,
-        x: globalX,
-        y: globalY,
-        targetCount: latestMmwaveData[sensor].target_count,
-        lastUpdated: latestMmwaveData[sensor].lastUpdated,
-      };
-    }
-
-    if (isNaN(globalX) || isNaN(globalY)) {
-      console.warn(`Invalid coordinates for sensor: ${sensor}`);
-      latestMmwaveData[sensor].globalX = null;
-      latestMmwaveData[sensor].globalY = null;
-      return;
-    }
-
-    globalX = globalX * scaleFactor;
-    globalY = mapHeight - globalY * scaleFactor;
-
-    latestMmwaveData[sensor].globalX = globalX;
-    latestMmwaveData[sensor].globalY = globalY;
+    return data?.target_count > 0 && Date.now() - data.lastUpdated <= 200;
   });
 
-  //console.log("Processed latestMmwaveData:", latestMmwaveData);
-}
+  let finalData = {};
 
-// Render target count for each radar sensor as texts
-export function renderTargetCount(radarPositions) {
-  const sensors = Object.keys(latestMmwaveData);
+  if (validMmwaveSensor) {
+    // Use mmWave data if available
+    const sensorData = sensors
+      .map(sensor => {
+        const data = latestMmwaveData[sensor];
+        if (
+          data &&
+          typeof data.globalX === "number" &&
+          typeof data.globalY === "number" &&
+          data.target_count > 0 &&
+          Date.now() - data.lastUpdated <= 200
+        ) {
+          return { id: sensor, x: data.globalX, y: data.globalY };
+        }
+        return null;
+      })
+      .filter(Boolean);
 
-  sensors.forEach((sensor) => {
-    const data = latestMmwaveData[sensor];
-    const radar = radarPositions[sensor];
+    if (sensorData.length > 0) {
+      const lastSensor = sensorData[sensorData.length - 1];
+      const room = estimateUserRoom(mmWaveData.x, mmWaveData.y);
 
-    //console.log("Target count data:", data.lastUpdated);
-
-    let targetCount = data?.target_count ?? 0; // Safely get the target count, default to 0
-
-    // Check if the last updated time is more than 300 ms ago
-    if (Date.now() - data.lastUpdated > 200) {
-      targetCount = 0;
-    }
-
-    if (radar && radar.x !== undefined && radar.y !== undefined) {
-      let targetCountText = g.select(`.target-count-${sensor}`);
-
-      if (targetCountText.empty()) {
-        targetCountText = g.append("text")
-          .attr("class", `target-count-${sensor}`)
-          .attr("x", radar.x * scaleFactor)
-          .attr("y", mapHeight - radar.y * scaleFactor)
-          .attr("fill", "black")
-          .attr("font-size", "12px")
-          .attr("font-family", "Arial")
-          .attr("text-anchor", "middle");
+      if (room !== "Unknown" && crossRefBleInRoom(bleData.x, bleData.y, room)) {
+        finalData = {
+          x: lastSensor.x,
+          y: lastSensor.y,
+          room,
+          label: "Yusuf",
+        };
+      } else {
+        finalData = {
+          x: lastSensor.x,
+          y: lastSensor.y,
+          room,
+          label: "Unknown",
+        };
       }
-
-      targetCountText.text(`Target Count: ${targetCount}`);
-    } else {
-      console.warn("Invalid radar position for sensor:", sensor);
     }
-  });
+  } else {
+    // Fallback to BLE data
+    finalData = {
+      x: latestBLEPosition.x * scaleFactor,
+      y: mapHeight - latestBLEPosition.y * scaleFactor,
+      room: estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y),
+      label: "Yusuf",
+    };
+  }
+
+  if(finalData.room !== lastRoom) {
+    publishHybridData(finalData);
+    lastRoom = finalData.room;
+  }
+
+  renderHybridDot(finalData, mapHeight);
 }
-
-
-
 
 //Render mmWave sensors using precomputed global coordinates.
 export function renderMmwaveSensors(mapHeight) {
@@ -268,6 +172,95 @@ export function renderMmwaveSensors(mapHeight) {
   hue = (hue + 5) % 360;
 }
 
+// Render latest position and room name on the map
+export function renderBLE(mapHeight) {
+  let positionDot = g.select(".latest-position-dot");
+  let roomText = g.select(".latest-room-text");
+
+  let ble = { x : latestBLEPosition.x * scaleFactor, y : mapHeight - latestBLEPosition.y * scaleFactor, room : estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y)};
+  bleData = latestBLEPosition;
+
+  if (positionDot.empty()) {
+    // Append the circle if it doesn't exist
+    positionDot = g.append("circle")
+      .attr("class", "latest-position-dot")
+      .attr("r", 5)
+      .attr("fill", "red");
+  }
+
+  if (roomText.empty()) {
+    // Append the room name text if it doesn't exist
+    roomText = g.append("text")
+      .attr("class", "latest-room-text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", "16px")
+      .attr("fill", "black")
+      .attr("font-weight", "bold")
+      .attr("font-family", "Arial");
+  }
+
+  // Update the circle's position
+  positionDot
+    .attr("cx", ble.x)
+    .attr("cy", ble.y);
+
+
+  // Update the room name position and text
+  roomText
+    .attr("x", ble.x)
+    .attr("y", ble.y - 10)
+    .text(ble.room);
+}
+
+// Render target count for each radar sensor as texts
+export function renderTargetCount(radarPositions) {
+  const sensors = Object.keys(latestMmwaveData);
+
+  sensors.forEach((sensor) => {
+    const data = latestMmwaveData[sensor];
+    const radar = radarPositions[sensor];
+
+    //console.log("Target count data:", data.lastUpdated);
+
+    let targetCount = data?.target_count ?? 0; // Safely get the target count, default to 0
+
+    // Check if the last updated time is more than 300 ms ago
+    if (Date.now() - data.lastUpdated > 200) {
+      targetCount = 0;
+    }
+
+    if (radar && radar.x !== undefined && radar.y !== undefined) {
+      let targetCountText = g.select(`.target-count-${sensor}`);
+
+      if (targetCountText.empty()) {
+        targetCountText = g.append("text")
+          .attr("class", `target-count-${sensor}`)
+          .attr("x", radar.x * scaleFactor)
+          .attr("y", mapHeight - radar.y * scaleFactor)
+          .attr("fill", "black")
+          .attr("font-size", "12px")
+          .attr("font-family", "Arial")
+          .attr("text-anchor", "middle");
+      }
+
+      targetCountText.text(`Target Count: ${targetCount}`);
+    } else {
+      console.warn("Invalid radar position for sensor:", sensor);
+    }
+  });
+}
+// Render bounds (map border)
+export function renderBounds(bounds) {
+  const [[xMin, yMin], [xMax, yMax]] = bounds;
+  g.append("rect")
+    .attr("x", xMin * scaleFactor)
+    .attr("y", yMin * scaleFactor)
+    .attr("width", (xMax - xMin) * scaleFactor)
+    .attr("height", (yMax - yMin) * scaleFactor)
+    .attr("fill", "none")
+    .attr("stroke", "#f5f7f7")
+    .attr("stroke-width", 0);
+}
 
 // Render rooms
 export function renderRooms(rooms) {
@@ -351,6 +344,159 @@ export function renderSensors(radarPositions) {
   });
 }
 
+// Render a dot for hybrid localization on the map
+function renderHybridDot(data, mapHeight) {
+  let positionDot = g.select(".hybrid-position-dot");
+  let roomText = g.select(".hybrid-room-text");
+
+  if (positionDot.empty()) {
+    positionDot = g.append("circle")
+      .attr("class", "hybrid-position-dot")
+      .attr("r", 5)
+      .attr("fill", "Green");
+  }
+
+  if (roomText.empty()) {
+    roomText = g.append("text")
+      .attr("class", "hybrid-room-text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", "16px")
+      .attr("fill", "black")
+      .attr("font-weight", "bold")
+      .attr("font-family", "Arial");
+  }
+
+  positionDot
+    .attr("cx", data.x)
+    .attr("cy", data.y);
+
+  roomText
+    .attr("x", data.x)
+    .attr("y", data.y - 10)
+    .text(data.label);
+}
+
+// Publish hybrid data to MQTT
+function publishHybridData(data) {
+  fetch('/publish_hybrid_data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      user_id: data.label,
+      room: data.room,
+    }),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      if (result.status === "success") {
+        console.log("Hybrid data published successfully:", result.message);
+      } else {
+        console.error("Failed to publish hybrid data:", result.message);
+      }
+    })
+    .catch((error) => {
+      console.error("Error publishing hybrid data:", error);
+    });
+}
+
+// Crossreference BLE data within a room
+function crossRefBleInRoom(x, y, room) {
+
+  const roomData = floor_data.find(r => r.id === room);
+  if (!roomData) return false;
+
+  const [[xMin, yMin], [xMax, yMax]] = roomData.bounds;
+  const borderOffset = 20 / scaleFactor;
+
+  return (
+    x >= xMin - borderOffset &&
+    x <= xMax + borderOffset &&
+    y >= yMin - borderOffset &&
+    y <= yMax + borderOffset
+  );
+}
+
+// Updated estimateUserRoom to use x, y coordinates and floor_data
+export function estimateUserRoom(x, y) {
+
+  for (const room of floor_data) {
+    const [[xMin, yMin], [xMax, yMax]] = room.bounds;
+    if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
+      //console.log(`Estimated User Room: ${room.id}`);
+      return room.id;
+    }
+  }
+
+  console.warn(`Coordinates (${x}, ${y}) are outside known room bounds.`);
+  return "Unknown"; // Default if no match is found
+}
+// Map angle from [-60, 60] to [0, 120]
+function mapAngle(input) {
+  // Shift input range from [-60, 60] to [0, 120]
+  const shiftedInput = input + 60;
+
+  // Normalize to [0, 1]
+  const normalizedInput = shiftedInput / 120;
+
+  // Scale to [0, 120]
+  const mappedValue = normalizedInput * 120;
+
+  return mappedValue;
+}
+// Perform mmWave calculations and update latestMmwaveData with global Cartesian coordinates.
+export function calculateMmwaveGlobalCoordinates(mapHeight) {
+  const sensors = Object.keys(latestMmwaveData);
+
+  sensors.forEach((sensor) => {
+    const data = latestMmwaveData[sensor];
+    const radar = radarPositions[sensor];
+    let globalX = 0;
+    let globalY = 0;
+
+    if (!data || !radar || (data.x === 0 && data.y === 0)) {
+      //console.warn(`Skipping sensor: ${sensor} - Invalid data or radar configuration`);
+      latestMmwaveData[sensor].globalX = null;
+      latestMmwaveData[sensor].globalY = null;
+      return;
+    }
+
+    const distance = Math.sqrt(data.x ** 2 + data.y ** 2) / 1000; // Convert mm to meters
+    const mappedAngle = mapAngle(data.angle);
+    const effectiveAngle = radar.orientation + mappedAngle;
+    const angleInRadians = effectiveAngle * (Math.PI / 180);
+
+    globalX = radar.x + distance * Math.cos(angleInRadians);
+    globalY = radar.y + distance * Math.sin(angleInRadians);
+    //console.log("Global X:", globalX, "Global Y:", globalY);
+
+    if (latestMmwaveData[sensor].target_count > 0) {
+      mmWaveData = {
+        id: sensor,
+        x: globalX,
+        y: globalY,
+        targetCount: latestMmwaveData[sensor].target_count,
+        lastUpdated: latestMmwaveData[sensor].lastUpdated,
+      };
+    }
+
+    if (isNaN(globalX) || isNaN(globalY)) {
+      console.warn(`Invalid coordinates for sensor: ${sensor}`);
+      latestMmwaveData[sensor].globalX = null;
+      latestMmwaveData[sensor].globalY = null;
+      return;
+    }
+
+    globalX = globalX * scaleFactor;
+    globalY = mapHeight - globalY * scaleFactor;
+
+    latestMmwaveData[sensor].globalX = globalX;
+    latestMmwaveData[sensor].globalY = globalY;
+  });
+
+  //console.log("Processed latestMmwaveData:", latestMmwaveData);
+}
 
 // Calculate the bounds of a polygon
 export function calculatePolygonBounds(polygon) {
@@ -407,23 +553,6 @@ export function generateButtonPositions(room, roomButtons) {
   return positions;
 }
 
-function isInsideFurniture(point) {
-  return furniture.some(item => d3.polygonContains(item.points, point));
-}
-
-function isInsideRoom(point, room) {
-  // Validate input
-  if (!room || !room.points || !Array.isArray(room.points)) {
-    console.log("Room or room points are not properly defined");
-    return false;
-  }
-
-  // Use d3.polygonContains to check if the point is inside the room
-  return d3.polygonContains(room.points, point);
-}
-
-
-
 export function renderRoomButtons(rooms, buttonCounts) {
   const clickedButtons = new Set(); // To track clicked buttons
 
@@ -437,8 +566,8 @@ export function renderRoomButtons(rooms, buttonCounts) {
       const yStep = roomHeight / roomButtons;
 
       roomPositions = Array.from({ length: roomButtons }, (_, i) => [
-        (xMin + xMax) / 2, // Center x position
-        yMin + i * yStep + yStep / 2, // Evenly spaced y positions
+        (xMin + xMax) / 2,
+        yMin + i * yStep + yStep / 2,
       ]);
     } else {
       roomPositions = generateButtonPositions(room, roomButtons);
@@ -500,24 +629,9 @@ export function renderRoomButtons(rooms, buttonCounts) {
     });
   });
 }
-
-
-
-// Updated estimateUserRoom to use x, y coordinates and floor_data
-export function estimateUserRoom(x, y) {
-
-  for (const room of floor_data) {
-    const [[xMin, yMin], [xMax, yMax]] = room.bounds;
-    if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
-      //console.log(`Estimated User Room: ${room.id}`);
-      return room.id;
-    }
-  }
-
-  console.warn(`Coordinates (${x}, ${y}) are outside known room bounds.`);
-  return "Unknown"; // Default if no match is found
+function isInsideFurniture(point) {
+  return furniture.some(item => d3.polygonContains(item.points, point));
 }
-
 
 
 export function renderRoomButtonsSingle(rooms) {
@@ -605,158 +719,12 @@ export function renderRoomButtonsSingle(rooms) {
   });
 }
 
-
-export function renderHybridLocalization(mapHeight) {
-  let lastRoom = "Unknown";
-
-  calculateMmwaveGlobalCoordinates(mapHeight);
-  const sensors = Object.keys(latestMmwaveData);
-  let ble = { x : latestBLEPosition.x * scaleFactor, y : mapHeight - latestBLEPosition.y * scaleFactor, room : estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y)};
-  bleData = latestBLEPosition;
-  // Check if any mmWave sensor is valid
-  const validMmwaveSensor = sensors.some(sensor => {
-    const data = latestMmwaveData[sensor];
-    return data?.target_count > 0 && Date.now() - data.lastUpdated <= 200;
-  });
-
-  let finalData = {};
-
-  if (validMmwaveSensor) {
-    // Use mmWave data if available
-    const sensorData = sensors
-      .map(sensor => {
-        const data = latestMmwaveData[sensor];
-        if (
-          data &&
-          typeof data.globalX === "number" &&
-          typeof data.globalY === "number" &&
-          data.target_count > 0 &&
-          Date.now() - data.lastUpdated <= 200
-        ) {
-          return { id: sensor, x: data.globalX, y: data.globalY };
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    if (sensorData.length > 0) {
-      const lastSensor = sensorData[sensorData.length - 1];
-      const room = estimateUserRoom(mmWaveData.x, mmWaveData.y);
-
-      if (room !== "Unknown" && validateBleInRoom(bleData.x, bleData.y, room)) {
-        finalData = {
-          x: lastSensor.x,
-          y: lastSensor.y,
-          room,
-          label: "Yusuf",
-        };
-      } else {
-        finalData = {
-          x: lastSensor.x,
-          y: lastSensor.y,
-          room,
-          label: "Unknown",
-        };
-      }
-    }
-  } else {
-    // Fallback to BLE data
-    finalData = {
-      x: latestBLEPosition.x * scaleFactor,
-      y: mapHeight - latestBLEPosition.y * scaleFactor,
-      room: estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y),
-      label: "Yusuf",
-    };
-  }
-
-  if(finalData.room !== lastRoom) {
-    publishHybridData(finalData);
-    lastRoom = finalData.room;
-  }
-
-  renderHybridDot(finalData, mapHeight);
-}
-
-function renderHybridDot(data, mapHeight) {
-  let positionDot = g.select(".hybrid-position-dot");
-  let roomText = g.select(".hybrid-room-text");
-
-  if (positionDot.empty()) {
-    positionDot = g.append("circle")
-      .attr("class", "hybrid-position-dot")
-      .attr("r", 5)
-      .attr("fill", "Green");
-  }
-
-  if (roomText.empty()) {
-    roomText = g.append("text")
-      .attr("class", "hybrid-room-text")
-      .attr("text-anchor", "middle")
-      .attr("font-size", "16px")
-      .attr("fill", "black")
-      .attr("font-weight", "bold")
-      .attr("font-family", "Arial");
-  }
-
-  positionDot
-    .attr("cx", data.x)
-    .attr("cy", data.y);
-
-  roomText
-    .attr("x", data.x)
-    .attr("y", data.y - 10)
-    .text(data.label);
-}
-
-// Publish hybrid data to MQTT
-function publishHybridData(data) {
-  fetch('/publish_hybrid_data', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      user_id: data.label,
-      room: data.room,
-    }),
-  })
-    .then((response) => response.json())
-    .then((result) => {
-      if (result.status === "success") {
-        console.log("Hybrid data published successfully:", result.message);
-      } else {
-        console.error("Failed to publish hybrid data:", result.message);
-      }
-    })
-    .catch((error) => {
-      console.error("Error publishing hybrid data:", error);
-    });
-}
-
-// Validate BLE data within a room
-function validateBleInRoom(x, y, room) {
-
-  const roomData = floor_data.find(r => r.id === room);
-  if (!roomData) return false;
-
-  const [[xMin, yMin], [xMax, yMax]] = roomData.bounds;
-  const borderOffset = 20 / scaleFactor;
-
-  return (
-    x >= xMin - borderOffset &&
-    x <= xMax + borderOffset &&
-    y >= yMin - borderOffset &&
-    y <= yMax + borderOffset
-  );
-}
-
 // Fetch button data from the server and render it on the map
 export async function fetchAndRenderButtonData() {
   try {
     const response = await fetch("get_button_click_data");
     const jsonResponse = await response.json();
 
-    // Access the 'data' array from the response
     const buttonData = jsonResponse.data;
 
     renderSavedButtonData(buttonData);
@@ -769,9 +737,6 @@ export async function fetchAndRenderButtonData() {
 export function renderSavedButtonData(buttonData) {
   buttonData.forEach(data => {
     const { button_x, button_y, mmwave_x, mmwave_y } = data;
-
-    // Handle cases where mmWave data might be missing
-    const buttonColor = (mmwave_x != null && mmwave_y != null) ? "green" : "blue";
 
     // Render a line connecting button and mmWave data if mmWave data is available
     if (mmwave_x != null && mmwave_y != null) {
