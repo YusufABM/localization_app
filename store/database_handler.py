@@ -21,8 +21,8 @@ class DatabaseHandler:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     button_x REAL NOT NULL,
                     button_y REAL NOT NULL,
-                    mmwave_x REAL,
-                    mmwave_y REAL,
+                    sensor_x REAL,
+                    sensor_y REAL,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -71,6 +71,6 @@ class DatabaseHandler:
             cursor.execute("SELECT * FROM button_clicks")
             rows = cursor.fetchall()
             return [
-                {"id": row[0], "button_x": row[1], "button_y": row[2], "mmwave_x": row[3], "mmwave_y": row[4], "timestamp": row[5]}
+                {"id": row[0], "button_x": row[1], "button_y": row[2], "sensor_x": row[3], "sensor_y": row[4], "timestamp": row[5]}
                 for row in rows
             ]

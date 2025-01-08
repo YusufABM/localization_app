@@ -3,8 +3,6 @@ import ctypes
 from flask_mqtt import Mqtt
 import json
 
-latest_room_message = Array(ctypes.c_char, 50)  # Unicode string value, initial value "Unknown"
-
 global latest_ble_data
 latest_ble_data = {"x": 0, "y": 0}
 
@@ -20,6 +18,19 @@ def load_secrets():
     """Load MQTT secrets from the /secrets/mqtt_secrets.json file."""
     with open('./secrets/connectioninfo_secrets.json', 'r') as secrets_file:
         return json.load(secrets_file)
+
+def publish_hybrid_data(user_id, room):
+    """Publish hybrid localization data to the MQTT broker."""
+    try:
+        topic = "home/userlocation"
+        payload = {
+            "user_id": user_id,
+            "room": room,
+        }
+        mqtt_client.publish(topic, json.dumps(payload), qos=0)
+        print(f"Published to MQTT: {topic}, {payload}")
+    except Exception as e:
+        print(f"Error publishing hybrid data to MQTT: {e}")
 
 def init_mqtt(app, socketio):
     # Load secrets
@@ -56,7 +67,6 @@ def init_mqtt(app, socketio):
     @mqtt_client.on_message()
     def handle_mqtt_message(client, userdata, message):
         global latest_ble_data
-        global latest_room_message
         global mmwave_data
         try:
 
@@ -65,13 +75,6 @@ def init_mqtt(app, socketio):
 
             if payload == "First Floor":
                 print(f"First Floor message received. Skipping...'{payload}'")
-                return
-
-            if payload in ["Hallway", "Office"]:
-                with latest_room_message.get_lock():  # Thread-safe update
-                    latest_room_message.value = payload.encode('utf-8')
-                #print(f"MQTTS Room Message: {latest_room_message}")
-                socketio.emit('update_room', {'room': latest_room_message.value.decode('utf-8')})
                 return
 
             if topic.startswith('mmwave-office/sensor/'):

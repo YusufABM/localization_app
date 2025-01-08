@@ -1,11 +1,11 @@
-export const latestRoom = { room: "Office" };
 export const latestBLEPosition = { x: 0, y: 0 };
 export let latestMmwaveData = {
   office: { x: 0, y: 0, angle: 0, direction: "", target_count: 0, lastUpdated: 0 },
   kitchen: { x: 0, y: 0, angle: 0, direction: "", target_count: 0, lastUpdated: 0 }
 };
-export const latestHybridPosition = {x: 0, y: 0, room: "Unkown", source: "Unknown"};
 
+
+// Room data for the first floor
 export const floor = [
   {
     id: "Office",
@@ -45,7 +45,12 @@ export const floor = [
   }
 ];
 
-
+// Simplified room data for the first floor
+export const floor_data = [
+  { id: "Office", bounds: [[1.7, 8.99], [7.55, 11.84]] },
+  { id: "Kitchen", bounds: [[1.7, 0], [7.55, 5.85]] },
+  { id: "Hallway", bounds: [[0, 0], [1.85, 11.84]] },
+];
 
 
 // Furniture data for the first floor
@@ -198,9 +203,123 @@ export const nodes = [
 
 // Radar positions and orientations
 export const radarPositions = {
-  office: { x: 7.45, y: 11.88, orientation: 120 },
+  office: { x: 7.45, y: 11.88, orientation: 165 },
   kitchen: { x: 7.45, y: 2.92, orientation: 120 }
 };
+
+export function calculateButtonPosition(button, room) {
+  const [px, py] = button;
+  // Filter walls to get only the walls belonging to the current room
+  const roomWalls = walls.filter((wall) => wall.room === room.id);
+
+  // Calculate the distance from the button to each wall
+  const wallDistances = roomWalls.map(({ points: [start, end], orientation }) => {
+    const { distance, closestPoint } = distanceToLineSegment([px, py], start, end);
+    return {
+      distance,
+      closestPoint,
+      orientation,
+    };
+  });
+
+  // Sort walls by distance to find the closest two walls
+  wallDistances.sort((a, b) => a.distance - b.distance);
+
+  const closestWall = wallDistances[0];
+  const secondClosestWall = wallDistances[1];
+
+  // Log the details for debugging
+  console.log(
+    `Button at (${px.toFixed(2)}, ${py.toFixed(2)}) in room "${room.name}" is:\n` +
+      `- ${closestWall.distance.toFixed(2)}m from the ${closestWall.orientation} wall.\n` +
+      `- ${secondClosestWall.distance.toFixed(2)}m from the ${secondClosestWall.orientation} wall.`
+  );
+}
+
+// Update latest position on the map
+export async function fetchLatestBLE() {
+  try {
+    const response = await fetch('/latest_BLE');
+    const data = await response.json();
+    latestBLEPosition.x = data.x;
+    latestBLEPosition.y = data.y;
+  } catch (error) {
+    console.error('Error fetching latest position:', error);
+  }
+}
+
+
+// Update the latest mmWave data
+export async function fetchLatestMmwaveData() {
+  try {
+    const response = await fetch('/latest_mmwave');
+    const data = await response.json();
+
+    if (data.office) {
+      latestMmwaveData.office = {
+        ...latestMmwaveData.office,
+        ...data.office,
+        lastUpdated: Date.now(),
+      };
+      //console.log(`Office lastUpdated: ${latestMmwaveData.office.lastUpdated}`);
+    } else {
+      latestMmwaveData.office.lastUpdated = 0; // Reset if no data
+    }
+
+    if (data.kitchen) {
+      latestMmwaveData.kitchen = {
+        ...latestMmwaveData.kitchen,
+        ...data.kitchen,
+        lastUpdated: Date.now(),
+      };
+      //console.log(`Kitchen lastUpdated: ${latestMmwaveData.kitchen.lastUpdated}`);
+    } else {
+      latestMmwaveData.kitchen.lastUpdated = 0; // Reset if no data
+    }
+
+    // Log updated mmWave data for debugging
+    //console.log("Updated mmWave Data:", latestMmwaveData);
+  } catch (error) {
+    console.error('Error fetching latest mmWave data:', error);
+  }
+}
+
+
+export function searchButtonsOnLine(position, room, roomPositions) {
+  const [x, y] = position;
+
+  // Define a tolerance for floating-point comparisons
+  const tolerance = 1e-2;
+
+  // Filter buttons in the same row and column
+  const buttonsInRow = roomPositions.filter(([x2, y2]) => Math.abs(y2 - y) <= tolerance && x2 !== x);
+  const buttonsInColumn = roomPositions.filter(([x2, y2]) => Math.abs(x2 - x) <= tolerance && y2 !== y);
+
+  // Find the nearest button in the same row
+  const nearestInRow = buttonsInRow.reduce(
+    (closest, [x2, y2]) => {
+      const dist = Math.abs(x2 - x);
+      return dist < closest.dist ? { dist, coord: [x2, y2] } : closest;
+    },
+    { dist: Infinity, coord: null }
+  );
+
+  // Find the nearest button in the same column
+  const nearestInColumn = buttonsInColumn.reduce(
+    (closest, [x2, y2]) => {
+      const dist = Math.abs(y2 - y);
+      return dist < closest.dist ? { dist, coord: [x2, y2] } : closest;
+    },
+    { dist: Infinity, coord: null }
+  );
+
+  return {
+    buttonsInRow: buttonsInRow.length,
+    buttonsInColumn: buttonsInColumn.length,
+    distanceToNextInRow: nearestInRow.dist,
+    distanceToNextInColumn: nearestInColumn.dist,
+  };
+}
 
 // List of walls and their orientation
 export const walls = [
@@ -267,6 +386,7 @@ export const walls = [
 ];
 
 // Function to define wall orientation
+// Used for floor ground truth real world set up
 export function getWallOrientation([x1, y1], [x2, y2]) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -279,6 +399,7 @@ export function getWallOrientation([x1, y1], [x2, y2]) {
 }
 
 // Function to calculate the distance from a point to a line segment
+// Used for floor ground truth real world set up
 export function distanceToLineSegment([px, py], [x1, y1], [x2, y2]) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -292,168 +413,3 @@ export function distanceToLineSegment([px, py], [x1, y1], [x2, y2]) {
     closestPoint: [closestX, closestY],
   };
 }
-
-export function calculateButtonPosition(button, room) {
-  const [px, py] = button;
-  // Filter walls to get only the walls belonging to the current room
-  const roomWalls = walls.filter((wall) => wall.room === room.id);
-
-  // Calculate the distance from the button to each wall
-  const wallDistances = roomWalls.map(({ points: [start, end], orientation }) => {
-    const { distance, closestPoint } = distanceToLineSegment([px, py], start, end);
-    return {
-      distance,
-      closestPoint,
-      orientation,
-    };
-  });
-
-  // Sort walls by distance to find the closest two walls
-  wallDistances.sort((a, b) => a.distance - b.distance);
-
-  const closestWall = wallDistances[0];
-  const secondClosestWall = wallDistances[1];
-
-  // Log the details for debugging
-  console.log(
-    `Button at (${px.toFixed(2)}, ${py.toFixed(2)}) in room "${room.name}" is:\n` +
-      `- ${closestWall.distance.toFixed(2)}m from the ${closestWall.orientation} wall.\n` +
-      `- ${secondClosestWall.distance.toFixed(2)}m from the ${secondClosestWall.orientation} wall.`
-  );
-}
-
-// Update latest position on the map
-export async function fetchLatestBLE() {
-  try {
-    const response = await fetch('/latest_position');
-    const data = await response.json();
-    latestBLEPosition.x = data.x;
-    latestBLEPosition.y = data.y;
-    //console.log(`Updated Position - x: ${latestBLEPosition.x}, y: ${latestBLEPosition.y}`);
-  } catch (error) {
-    console.error('Error fetching latest position:', error);
-  }
-}
-
-export async function fetchLatestHybridPosition() {
-  try {
-    const response = await fetch('/hybrid_position');
-    const data = await response.json();
-
-    // Log the full data for debugging
-    //console.log('Hybrid Position Response:', data);
-
-    // Correctly access nested data
-    if (data.room && data.x && data.y) {
-      latestHybridPosition.x = data.x;
-      latestHybridPosition.y = data.y;
-      latestHybridPosition.room = data.room;
-      latestHybridPosition.source = data.source;
-    }
-
-    // Log updated position and room for debugging
-    //console.log('Updated Hybrid Position:', latestHybridPosition.x, latestHybridPosition.y);
-    //console.log('Updated Room:', latestHybridPosition.room);
-  } catch (error) {
-    console.error('Error fetching latest hybrid position:', error);
-  }
-}
-
-
-// Update the latest room estimate on the map
-export async function fetchLatestRoom() {
-  try {
-    const response = await fetch('/latest_room');
-    const data = await response.json();
-    //latestRoom.room = data.room;
-    //console.log(`DATA Room: ${latestRoom.room}`);
-  } catch (error) {
-    console.error('Error fetching latest room:', error);
-  }
-}
-
-// Update the latest mmWave data
-export async function fetchLatestMmwaveData() {
-  try {
-    const response = await fetch('/latest_mmwave'); // Fetch data from the endpoint
-    const data = await response.json(); // Parse the response as JSON
-
-    if (data.office) {
-      latestMmwaveData.office = {
-        ...latestMmwaveData.office,
-        ...data.office,
-        lastUpdated: Date.now(),
-      };
-      //console.log(`Office lastUpdated: ${latestMmwaveData.office.lastUpdated}`);
-    } else {
-      latestMmwaveData.office.lastUpdated = 0; // Reset if no data
-    }
-
-    if (data.kitchen) {
-      latestMmwaveData.kitchen = {
-        ...latestMmwaveData.kitchen,
-        ...data.kitchen,
-        lastUpdated: Date.now(),
-      };
-      //console.log(`Kitchen lastUpdated: ${latestMmwaveData.kitchen.lastUpdated}`);
-    } else {
-      latestMmwaveData.kitchen.lastUpdated = 0; // Reset if no data
-    }
-
-    // Log updated mmWave data for debugging
-    //console.log("Updated mmWave Data:", latestMmwaveData);
-  } catch (error) {
-    console.error('Error fetching latest mmWave data:', error);
-  }
-}
-
-function mapAngle(input) {
-  // Shift input range from [-60, 60] to [0, 120]
-  const shiftedInput = input + 60;
-
-  // Normalize to [0, 1]
-  const normalizedInput = shiftedInput / 120;
-
-  // Scale to [0, 120]
-  const mappedValue = normalizedInput * 120;
-
-  return mappedValue;
-}
-
-
-export function searchButtonsOnLine(position, room, roomPositions) {
-  const [x, y] = position;
-
-  // Define a tolerance for floating-point comparisons
-  const tolerance = 1e-2;
-
-  // Filter buttons in the same row and column
-  const buttonsInRow = roomPositions.filter(([x2, y2]) => Math.abs(y2 - y) <= tolerance && x2 !== x);
-  const buttonsInColumn = roomPositions.filter(([x2, y2]) => Math.abs(x2 - x) <= tolerance && y2 !== y);
-
-  // Find the nearest button in the same row
-  const nearestInRow = buttonsInRow.reduce(
-    (closest, [x2, y2]) => {
-      const dist = Math.abs(x2 - x);
-      return dist < closest.dist ? { dist, coord: [x2, y2] } : closest;
-    },
-    { dist: Infinity, coord: null }
-  );
-
-  // Find the nearest button in the same column
-  const nearestInColumn = buttonsInColumn.reduce(
-    (closest, [x2, y2]) => {
-      const dist = Math.abs(y2 - y);
-      return dist < closest.dist ? { dist, coord: [x2, y2] } : closest;
-    },
-    { dist: Infinity, coord: null }
-  );
-
-  return {
-    buttonsInRow: buttonsInRow.length,
-    buttonsInColumn: buttonsInColumn.length,
-    distanceToNextInRow: nearestInRow.dist,
-    distanceToNextInColumn: nearestInColumn.dist,
-  };
-}
-

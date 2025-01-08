@@ -1,11 +1,9 @@
 import { calculateButtonPosition, searchButtonsOnLine } from "./data.js";
-import { floor, furniture, nodes, radarPositions, fetchLatestBLE,latestBLEPosition, fetchLatestRoom, latestRoom, fetchLatestMmwaveData, latestMmwaveData, fetchLatestHybridPosition, latestHybridPosition } from "./data.js";
+import { floor, furniture, nodes, radarPositions, fetchLatestBLE,latestBLEPosition, fetchLatestMmwaveData, latestMmwaveData, floor_data } from "./data.js";
 import { g } from "./map.js";
 
 
 // Config and scaling
-const width = window.innerWidth;
-const height = window.innerHeight;
 const scaleFactor = 50;
 let  yStep;
 let  xStep;
@@ -14,40 +12,20 @@ export let mmWaveData = {};
 export let bleData = {};
 
 // Calculate the map's size in pixels
-const mapWidth = (floor[0].bounds[1][0] - floor[0].bounds[0][0]) * scaleFactor;
 const mapHeight = (floor[0].bounds[1][1] - floor[0].bounds[0][1]) * scaleFactor;
 
 // Periodically fetch and update position and room name
 export function startPositionUpdates(mapHeight) {
   setInterval(async () => {
-    //await fetchLatestRoom();
     await fetchLatestBLE();
     await fetchLatestMmwaveData();
-    //await fetchLatestHybridPosition();
-    //calculateMmwaveGlobalCoordinates(mapHeight);
     renderTargetCount(radarPositions);
-    //await syncMmwaveDataToBackend();
-    // Calculate mmWave global coordinates
-    renderHybridLocalization(mapHeight); // Update hybrid position
-    //renderHybridPosition(mapHeight); // Update hybrid position
-  // renderBLE(mapHeight); // Update position and room name
-   //renderMmwaveSensors(mapHeight); // Update mmWave sensor readings
+    renderHybridLocalization(mapHeight); // Render hybrid position
+    // renderBLE(mapHeight); // Render BLE position
+     //renderMmwaveSensors(mapHeight); // Render mmWave position
   }, 50);
 }
 
-
-function syncMmwaveDataToBackend() {
-  //console.log("Syncing mmWave Data:", latestMmwaveData); // Debug log before sending
-  fetch('/update_mmwave', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(latestMmwaveData),
-  })
-    .then((response) => response.json())
-    .catch((error) => console.error('Error syncing mmWave data:', error));
-}
 
 
 // Render bounds (map border)
@@ -170,10 +148,6 @@ export function calculateMmwaveGlobalCoordinates(mapHeight) {
 
     latestMmwaveData[sensor].globalX = globalX;
     latestMmwaveData[sensor].globalY = globalY;
-
-    // Save x an y as a gloabl variable
-
-    //console.log(`Sensor: ${sensor}, Global X: ${globalX.toFixed(2)}, Global Y: ${globalY.toFixed(2)}`);
   });
 
   //console.log("Processed latestMmwaveData:", latestMmwaveData);
@@ -192,7 +166,7 @@ export function renderTargetCount(radarPositions) {
     let targetCount = data?.target_count ?? 0; // Safely get the target count, default to 0
 
     // Check if the last updated time is more than 300 ms ago
-    if (Date.now() - data.lastUpdated > 300) {
+    if (Date.now() - data.lastUpdated > 200) {
       targetCount = 0;
     }
 
@@ -210,7 +184,7 @@ export function renderTargetCount(radarPositions) {
           .attr("text-anchor", "middle");
       }
 
-      targetCountText.text(`Target Count: ${targetCount}`); // Dynamically update the target count
+      targetCountText.text(`Target Count: ${targetCount}`);
     } else {
       console.warn("Invalid radar position for sensor:", sensor);
     }
@@ -220,10 +194,7 @@ export function renderTargetCount(radarPositions) {
 
 
 
-/**
- * Render mmWave sensors using precomputed global coordinates.
- * @param {Object} mapHeight - The height of the map for coordinate inversion.
- */
+//Render mmWave sensors using precomputed global coordinates.
 export function renderMmwaveSensors(mapHeight) {
   calculateMmwaveGlobalCoordinates(mapHeight);
   const sensors = Object.keys(latestMmwaveData);
@@ -234,7 +205,7 @@ export function renderMmwaveSensors(mapHeight) {
     .map((sensor) => {
       const data = latestMmwaveData[sensor];
       if (!data || typeof data.globalX !== "number" || typeof data.globalY !== "number" || Date.now() - data.lastUpdated > 200) {
-        //console.warn(`Skipping sensor: ${sensor} - Invalid data, global coordinates, or outdated data`);
+        console.warn(`Skipping sensor: ${sensor} - Invalid data, global coordinates, or outdated data`);
         return null;
       }
       return {
@@ -263,9 +234,6 @@ export function renderMmwaveSensors(mapHeight) {
   if (lastSensor) {
     room = estimateUserRoom( mmWaveData["x"], mmWaveData["y"]);
   }
-  //console.log("Room:", room);
-  //console.log("DATA:", mmWaveData[sensors]);
-  //console.log("Sensor Data:", globalX, globalY);
   // Update existing circles
   circles
     .transition()
@@ -300,46 +268,6 @@ export function renderMmwaveSensors(mapHeight) {
   hue = (hue + 5) % 360;
 }
 
-
-// Render hybrid position on the map
-export function renderHybridPosition(mapHeight) {
-  let hybridDot = g.select(".hybrid-position-dot");
-  let hybridText = g.select(".hybrid-position-text");
-
-  if(latestHybridPosition.x === 0 && latestHybridPosition.y === 0) {
-    return;
-  }
-
-  if (hybridDot.empty()) {
-    // Append the circle if it doesn't exist
-    hybridDot = g.append("circle")
-      .attr("class", "hybrid-position-dot")
-      .attr("r", 5)
-      .attr("fill", "green");
-  }
-
-
-  if (hybridText.empty()) {
-    // Append the text if it doesn't exist
-    hybridText = g.append("text")
-      .attr("class", "hybrid-position-text")
-      .attr("text-anchor", "middle")
-      .attr("font-size", "12px")
-      .attr("fill", "black")
-      .attr("font-family", "Arial");
-  }
-
-  // Update the circle's position
-  hybridDot
-    .attr("cx", latestHybridPosition.x * scaleFactor)
-    .attr("cy", mapHeight - latestHybridPosition.y * scaleFactor);
-
-  // Update the text's position and content
-  hybridText
-    .attr("x", latestHybridPosition.x * scaleFactor)
-    .attr("y", mapHeight - latestHybridPosition.y * scaleFactor - 10)
-    .text(latestHybridPosition.room);
-}
 
 // Render rooms
 export function renderRooms(rooms) {
@@ -577,22 +505,16 @@ export function renderRoomButtons(rooms, buttonCounts) {
 
 // Updated estimateUserRoom to use x, y coordinates and floor_data
 export function estimateUserRoom(x, y) {
-  const floor_data = [
-    { id: "Office", bounds: [[1.7, 8.99], [7.55, 11.84]] },
-    { id: "Kitchen", bounds: [[1.7, 0], [7.55, 5.85]] },
-    { id: "Hallway", bounds: [[0, 0], [1.85, 11.84]] },
-  ];
 
-  // Iterate through each room and check if the point lies within its bounds
   for (const room of floor_data) {
     const [[xMin, yMin], [xMax, yMax]] = room.bounds;
     if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
       //console.log(`Estimated User Room: ${room.id}`);
-      return room.id; // Return the room ID as soon as a match is found
+      return room.id;
     }
   }
 
-  //console.warn(`Coordinates (${x}, ${y}) are outside known room bounds.`);
+  console.warn(`Coordinates (${x}, ${y}) are outside known room bounds.`);
   return "Unknown"; // Default if no match is found
 }
 
@@ -659,7 +581,6 @@ export function renderRoomButtonsSingle(rooms) {
                 console.error("Error saving time difference:", error)
               );
 
-            // Add animation for the button
             button
               .transition()
               .duration(200)
@@ -670,9 +591,9 @@ export function renderRoomButtonsSingle(rooms) {
 
             clearInterval(intervalId); // Stop checking once the data is saved
           }
-        }, 50); // Check every 50 ms
+        }, 50);
 
-        // Add visual feedback for the button click
+        // visual feedback for click
         d3.select(this)
           .transition()
           .duration(100)
@@ -686,6 +607,8 @@ export function renderRoomButtonsSingle(rooms) {
 
 
 export function renderHybridLocalization(mapHeight) {
+  let lastRoom = "Unknown";
+
   calculateMmwaveGlobalCoordinates(mapHeight);
   const sensors = Object.keys(latestMmwaveData);
   let ble = { x : latestBLEPosition.x * scaleFactor, y : mapHeight - latestBLEPosition.y * scaleFactor, room : estimateUserRoom(latestBLEPosition.x, latestBLEPosition.y)};
@@ -746,6 +669,11 @@ export function renderHybridLocalization(mapHeight) {
     };
   }
 
+  if(finalData.room !== lastRoom) {
+    publishHybridData(finalData);
+    lastRoom = finalData.room;
+  }
+
   renderHybridDot(finalData, mapHeight);
 }
 
@@ -780,12 +708,33 @@ function renderHybridDot(data, mapHeight) {
     .text(data.label);
 }
 
+// Publish hybrid data to MQTT
+function publishHybridData(data) {
+  fetch('/publish_hybrid_data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      user_id: data.label,
+      room: data.room,
+    }),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      if (result.status === "success") {
+        console.log("Hybrid data published successfully:", result.message);
+      } else {
+        console.error("Failed to publish hybrid data:", result.message);
+      }
+    })
+    .catch((error) => {
+      console.error("Error publishing hybrid data:", error);
+    });
+}
+
+// Validate BLE data within a room
 function validateBleInRoom(x, y, room) {
-  const floor_data = [
-    { id: "Office", bounds: [[1.7, 8.99], [7.55, 11.84]] },
-    { id: "Kitchen", bounds: [[1.7, 0], [7.55, 5.85]] },
-    { id: "Hallway", bounds: [[0, 0], [1.85, 11.84]] },
-  ];
 
   const roomData = floor_data.find(r => r.id === room);
   if (!roomData) return false;
